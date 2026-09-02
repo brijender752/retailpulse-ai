@@ -55,3 +55,16 @@ GenAI AI Analyst
 8. Build a GenAI analytics assistant.
 9. Implement monitoring.
 10. Deploy the platform using containers.
+
+## Current Architecture
+
+PostgreSQL
+    ↓
+E-commerce source tables
+    ↓
+Python data generator
+    ↓
+Realistic transactional data
+
+Current phase:
+PostgreSQL + Data Generation
