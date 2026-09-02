@@ -1,17 +1,17 @@
-import os
+# import os
 
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
 
-DATABASE_CONFIG = {
-    "host": os.getenv("POSTGRES_HOST", "localhost"),
-    "port": int(os.getenv("POSTGRES_PORT", "5432")),
-    "database": os.getenv("POSTGRES_DB", "retailpulse"),
-    "user": os.getenv("POSTGRES_USER", "retailpulse"),
-    "password": os.getenv("POSTGRES_PASSWORD", "retailpulse"),
-}
+# DATABASE_CONFIG = {
+#     "host": os.getenv("POSTGRES_HOST", "localhost"),
+#     "port": int(os.getenv("POSTGRES_PORT", "5432")),
+#     "database": os.getenv("POSTGRES_DB", "retailpulse"),
+#     "user": os.getenv("POSTGRES_USER", "retailpulse"),
+#     "password": os.getenv("POSTGRES_PASSWORD", "retailpulse"),
+# }
 
 
 DATA_VOLUME = {
@@ -22,3 +22,12 @@ DATA_VOLUME = {
     "support_tickets": 10_000,
     "marketing_events": 50_000,
 }
+
+# DATA_VOLUME = {
+#     "customers": 100,
+#     "products": 50,
+#     "orders": 500,
+#     "events": 2_000,
+#     "support_tickets": 100,
+#     "marketing_events": 500,
+# }
