@@ -31,12 +31,80 @@
 
 #   postgres_data:
 
+# services:
+
+#   postgres:
+#     image: postgres:16
+#     container_name: retailpulse-postgres
+#     restart: unless-stopped
+
+#     environment:
+#       POSTGRES_DB: ${POSTGRES_DB}
+#       POSTGRES_USER: ${POSTGRES_USER}
+#       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+#     ports:
+#       - "5432:5432"
+
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+
+#     healthcheck:
+#       test:
+#         [
+#           "CMD-SHELL",
+#           "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+#         ]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+
+#   minio:
+#     image: minio/minio:latest
+#     container_name: retailpulse-minio
+#     restart: unless-stopped
+
+#     command: server /data --console-address ":9001"
+
+#     environment:
+#       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+#       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+
+#     ports:
+#       - "9000:9000"
+#       - "9001:9001"
+
+#     volumes:
+#       - minio_data:/data
+
+
+# volumes:
+
+#   postgres_data:
+
+#   minio_data:
+
+
 services:
+
+  # ==========================================================
+  # PostgreSQL
+  # ==========================================================
 
   postgres:
     image: postgres:16
     container_name: retailpulse-postgres
     restart: unless-stopped
+
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
 
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -49,6 +117,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+    networks:
+      - retailpulse
+
     healthcheck:
       test:
         [
@@ -59,6 +130,10 @@ services:
       timeout: 5s
       retries: 5
 
+
+  # ==========================================================
+  # MinIO
+  # ==========================================================
 
   minio:
     image: minio/minio:latest
@@ -75,12 +150,361 @@ services:
       - "9000:9000"
       - "9001:9001"
 
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
     volumes:
       - minio_data:/data
+    networks:
+      - retailpulse  
 
+  # ==========================================================
+  # Kafka
+  # ==========================================================
+
+  kafka:
+    image: apache/kafka:4.0.1
+    container_name: retailpulse-kafka
+
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+    environment:
+      # KRaft mode
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9094
+
+      # Containers use Kafka's Compose hostname; local Python clients use localhost.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+    networks:
+      - retailpulse
+
+
+  # Create every CDC topic before Flink subscribes to it.  Debezium only
+  # creates a topic after it produces a record, while Flink subscribes to all
+  # configured tables immediately.
+  kafka-topic-init:
+    image: apache/kafka:4.0.1
+    container_name: retailpulse-kafka-topic-init
+    restart: "no"
+
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        for topic in customers products orders order_items payments inventory website_events support_tickets marketing_events; do
+          /opt/kafka/bin/kafka-topics.sh \
+            --bootstrap-server kafka:9092 \
+            --create \
+            --if-not-exists \
+            --topic "retailpulse.ecommerce.$${topic}" \
+            --partitions 3 \
+            --replication-factor 1
+        done
+
+    networks:
+      - retailpulse
+
+
+  kafka-ui:
+    image: kafbat/kafka-ui:latest
+    container_name: retailpulse-kafka-ui
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      - kafka
+
+    environment:
+      KAFKA_CLUSTERS_0_NAME: retailpulse
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+
+    networks:
+      - retailpulse
+
+  # ==========================================================
+  # Debezium Kafka Connect
+  # ==========================================================
+
+  debezium:
+    image: quay.io/debezium/connect:3.3.2.Final
+    container_name: retailpulse-debezium
+    restart: unless-stopped
+
+    depends_on:
+      - kafka
+      - postgres
+
+    ports:
+      - "8083:8083"
+
+    environment:
+
+      # ------------------------------------------------------
+      # Kafka
+      # ------------------------------------------------------
+
+      BOOTSTRAP_SERVERS: kafka:9092
+
+      GROUP_ID: 1
+
+      # ------------------------------------------------------
+      # Kafka Connect internal topics
+      # ------------------------------------------------------
+
+      CONFIG_STORAGE_TOPIC: debezium_connect_configs
+
+      OFFSET_STORAGE_TOPIC: debezium_connect_offsets
+
+      STATUS_STORAGE_TOPIC: debezium_connect_status
+
+      # ------------------------------------------------------
+      # Replication
+      # ------------------------------------------------------
+
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+
+      # ------------------------------------------------------
+      # Converters
+      # ------------------------------------------------------
+
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+
+      INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+
+      INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+
+      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+
+      # ------------------------------------------------------
+      # REST
+      # ------------------------------------------------------
+
+      REST_PORT: 8083
+
+      REST_ADVERTISED_HOST_NAME: debezium
+
+    networks:
+      - retailpulse
+
+
+  # Registers the PostgreSQL CDC connector after Kafka Connect is ready.
+  # Kafka Connect does not automatically load JSON files from the project.
+  debezium-init:
+    image: curlimages/curl:8.12.1
+    container_name: retailpulse-debezium-init
+    restart: "no"
+
+    depends_on:
+      debezium:
+        condition: service_started
+
+    volumes:
+      - ./ingestion/debezium/postgres-connector.json:/connector/postgres-connector.json:ro
+
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        until curl --fail --silent http://debezium:8083/connectors > /dev/null; do
+          echo "Waiting for Debezium Kafka Connect..."
+          sleep 2
+        done
+
+        if curl --fail --silent http://debezium:8083/connectors/retailpulse-postgres-connector > /dev/null; then
+          echo "PostgreSQL connector already registered."
+        else
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --data @/connector/postgres-connector.json \
+            http://debezium:8083/connectors
+          echo "PostgreSQL connector registered."
+        fi
+
+    networks:
+      - retailpulse
+
+
+  # ==========================================================
+  # Apache Flink JobManager
+  # ==========================================================
+
+  # Named Docker volumes are initially owned by root. Flink runs as the
+  # unprivileged `flink` user, so prepare the shared checkpoint directory
+  # before either Flink service starts.
+  flink-checkpoint-init:
+    image: alpine:3.21
+    container_name: retailpulse-flink-checkpoint-init
+    restart: "no"
+
+    command:
+      - sh
+      - -ec
+      - mkdir -p /tmp/flink-checkpoints && chmod 0777 /tmp/flink-checkpoints
+
+    volumes:
+      - flink_checkpoints:/tmp/flink-checkpoints
+
+  flink-jobmanager:
+    build:
+      context: ./flink
+    container_name: retailpulse-flink-jobmanager
+    user: flink
+    restart: unless-stopped
+
+    command: jobmanager
+
+    depends_on:
+      flink-checkpoint-init:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-topic-init:
+        condition: service_completed_successfully
+
+    ports:
+      - "8081:8081"
+
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        parallelism.default: 2
+        execution.checkpointing.storage: filesystem
+        execution.checkpointing.dir: file:///tmp/flink-checkpoints
+        s3.endpoint: http://minio:9000
+        s3.path.style.access: true
+        s3.access-key: minioadmin
+        s3.secret-key: minioadmin
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: retailpulse
+
+    networks:
+      - retailpulse
+
+    volumes:
+      - ./flink/jobs:/opt/flink/jobs
+      - flink_checkpoints:/tmp/flink-checkpoints
+
+
+  # ==========================================================
+  # Apache Flink TaskManager
+  # ==========================================================
+
+  flink-taskmanager:
+    build:
+      context: ./flink
+    container_name: retailpulse-flink-taskmanager
+    user: flink
+    restart: unless-stopped
+
+    depends_on:
+      flink-checkpoint-init:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-topic-init:
+        condition: service_completed_successfully
+      flink-jobmanager:
+        condition: service_started
+
+    command: taskmanager
+
+    environment:
+      # Reserve direct memory for Kafka and cap managed memory for this
+      # lightweight local FileSink workload.
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 10
+        taskmanager.memory.process.size: 2048m
+        taskmanager.memory.task.heap.size: 512m
+        taskmanager.memory.task.off-heap.size: 512m
+        taskmanager.memory.framework.off-heap.size: 128m
+        taskmanager.memory.network.min: 128m
+        taskmanager.memory.network.max: 128m
+        taskmanager.memory.managed.size: 128m
+        execution.checkpointing.storage: filesystem
+        execution.checkpointing.dir: file:///tmp/flink-checkpoints
+        s3.endpoint: http://minio:9000
+        s3.path.style.access: true
+        s3.access-key: minioadmin
+        s3.secret-key: minioadmin
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: retailpulse
+
+    networks:
+      - retailpulse
+
+    volumes:
+      - ./flink/jobs:/opt/flink/jobs
+      - flink_checkpoints:/tmp/flink-checkpoints   
+
+networks:
+  retailpulse:
+    driver: bridge
+
+# ============================================================
+# Volumes
+# ============================================================
 
 volumes:
 
   postgres_data:
 
   minio_data:
+  kafka_data:
+  flink_checkpoints:

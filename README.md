@@ -68,3 +68,24 @@ Realistic transactional data
 
 Current phase:
 PostgreSQL + Data Generation
+
+## Docker commands from Git Bash on Windows
+
+Git Bash/MSYS automatically converts arguments that begin with `/` into Windows
+paths. That breaks `docker exec` when the command or file path exists only
+inside a Linux container. Use a double leading slash for container paths;
+Docker normalizes it to a single slash:
+
+```bash
+# Kafka
+docker exec retailpulse-kafka //opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+# Flink
+docker compose up -d --build flink-jobmanager flink-taskmanager
+docker exec retailpulse-flink-jobmanager sh -lc 'flink run -py /opt/flink/jobs/retailpulse_bronze.py'
+```
+
+This avoids needing `MSYS_NO_PATHCONV=1` while preserving the normal single-slash
+Linux path inside the container. Use normal relative paths such as
+`./flink/jobs` for host-side paths in `docker compose` commands and Compose
+files.

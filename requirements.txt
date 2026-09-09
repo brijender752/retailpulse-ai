@@ -4,6 +4,8 @@ faker
 psycopg2-binary
 sqlalchemy
 python-dotenv
+kafka-python
 pydantic
 pytest
 requests
+pyspark

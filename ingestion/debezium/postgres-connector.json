@@ -1,0 +1,44 @@
+{
+  "name": "retailpulse-postgres-connector",
+
+  "config": {
+
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+
+    "database.hostname": "postgres",
+
+    "database.port": "5432",
+
+    "database.user": "retailpulse",
+
+    "database.password": "retailpulse",
+
+    "database.dbname": "retailpulse",
+
+    "topic.prefix": "retailpulse",
+
+    "plugin.name": "pgoutput",
+
+    "slot.name": "retailpulse_slot",
+
+    "publication.name": "retailpulse_publication",
+
+    "publication.autocreate.mode": "filtered",
+
+    "schema.include.list": "ecommerce",
+
+    "table.include.list": "ecommerce.customers,ecommerce.products,ecommerce.orders,ecommerce.order_items,ecommerce.payments,ecommerce.inventory,ecommerce.website_events,ecommerce.support_tickets,ecommerce.marketing_events",
+
+    "snapshot.mode": "initial",
+
+    "include.schema.changes": "false",
+
+    "tombstones.on.delete": "false",
+
+    "decimal.handling.mode": "double",
+
+    "time.precision.mode": "connect",
+
+    "heartbeat.interval.ms": "10000"
+  }
+}
