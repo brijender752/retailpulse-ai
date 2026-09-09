@@ -1,590 +1,558 @@
-import os
-from pathlib import Path
+import json
+from datetime import datetime, timezone
 
-# PySpark on Windows requires winutils.exe before it starts its Java gateway.
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-LOCAL_HADOOP_HOME = PROJECT_ROOT / "tools" / "hadoop"
-if (LOCAL_HADOOP_HOME / "bin" / "winutils.exe").exists():
-    os.environ["HADOOP_HOME"] = str(LOCAL_HADOOP_HOME)
-    os.environ["hadoop.home.dir"] = str(LOCAL_HADOOP_HOME)
-    os.environ.setdefault("SPARK_LOCAL_IP", "127.0.0.1")
+from pyflink.common import Types, WatermarkStrategy
+from pyflink.common.serialization import SimpleStringSchema
+from pyflink.common.typeinfo import RowTypeInfo
+from pyflink.datastream import StreamExecutionEnvironment
+from pyflink.datastream.connectors.kafka import (
+    KafkaSource,
+    KafkaOffsetsInitializer,
+)
+from pyflink.datastream.functions import MapFunction
+from pyflink.datastream.connectors.file_system import (
+    FileSink,
+    OutputFileConfig,
+    RollingPolicy,
+)
+from pyflink.formats.parquet import ParquetBulkWriters
 
-from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
-from pyspark.sql.window import Window
 
 # ============================================================
-# CONFIGURATION
+# CONFIG
 # ============================================================
 
-MINIO_ENDPOINT = "http://localhost:9000"
-MINIO_ACCESS_KEY = "minioadmin"
-MINIO_SECRET_KEY = "minioadmin"
+KAFKA_BOOTSTRAP = "kafka:9092"
 
-BRONZE_BASE = "s3a://retailpulse/bronze"
-SILVER_BASE = "s3a://retailpulse/silver"
+SILVER_BASE = "s3://retailpulse/silver_stream"
 
-HADOOP_AWS_PACKAGE = "org.apache.hadoop:hadoop-aws:3.5.0"
+TABLES = {
+    "customers": "retailpulse.ecommerce.customers",
+    "products": "retailpulse.ecommerce.products",
+    "orders": "retailpulse.ecommerce.orders",
+    "order_items": "retailpulse.ecommerce.order_items",
+    "payments": "retailpulse.ecommerce.payments",
+    "inventory": "retailpulse.ecommerce.inventory",
+    "website_events": "retailpulse.ecommerce.website_events",
+    "support_tickets": "retailpulse.ecommerce.support_tickets",
+    "marketing_events": "retailpulse.ecommerce.marketing_events",
+}
 
-# All RetailPulse source tables
-TABLES = [
-    "customers",
-    "products",
-    "orders",
-    "order_items",
-    "payments",
-    "inventory",
-    "website_events",
-    "support_tickets",
-    "marketing_events",
-]
+
+# ============================================================
+# BUSINESS SCHEMAS
+# ============================================================
+
+SCHEMAS = {
+
+    "customers": [
+        ("customer_id", Types.LONG()),
+        ("first_name", Types.STRING()),
+        ("last_name", Types.STRING()),
+        ("email", Types.STRING()),
+        ("phone", Types.STRING()),
+        ("country", Types.STRING()),
+        ("state", Types.STRING()),
+        ("city", Types.STRING()),
+        ("signup_date", Types.STRING()),
+        ("customer_segment", Types.STRING()),
+        ("updated_at", Types.STRING()),
+        ("created_at", Types.STRING()),
+    ],
+
+    "products": [
+        ("product_id", Types.LONG()),
+        ("product_name", Types.STRING()),
+        ("category", Types.STRING()),
+        ("subcategory", Types.STRING()),
+        ("brand", Types.STRING()),
+        ("price", Types.DOUBLE()),
+        ("cost", Types.DOUBLE()),
+        ("supplier_id", Types.LONG()),
+        ("inventory_quantity", Types.LONG()),
+        ("created_at", Types.STRING()),
+        ("updated_at", Types.STRING()),
+    ],
+
+    "orders": [
+        ("order_id", Types.LONG()),
+        ("customer_id", Types.LONG()),
+        ("order_date", Types.STRING()),
+        ("status", Types.STRING()),
+        ("payment_method", Types.STRING()),
+        ("shipping_country", Types.STRING()),
+        ("shipping_state", Types.STRING()),
+        ("total_amount", Types.DOUBLE()),
+        ("discount", Types.DOUBLE()),
+        ("tax", Types.DOUBLE()),
+        ("created_at", Types.STRING()),
+        ("updated_at", Types.STRING()),
+    ],
+
+    "order_items": [
+        ("order_item_id", Types.LONG()),
+        ("order_id", Types.LONG()),
+        ("product_id", Types.LONG()),
+        ("quantity", Types.LONG()),
+        ("unit_price", Types.DOUBLE()),
+        ("discount", Types.DOUBLE()),
+    ],
+
+    "payments": [
+        ("payment_id", Types.LONG()),
+        ("order_id", Types.LONG()),
+        ("customer_id", Types.LONG()),
+        ("amount", Types.DOUBLE()),
+        ("payment_method", Types.STRING()),
+        ("payment_status", Types.STRING()),
+        ("transaction_timestamp", Types.STRING()),
+    ],
+
+    "inventory": [
+        ("inventory_id", Types.LONG()),
+        ("product_id", Types.LONG()),
+        ("warehouse_id", Types.LONG()),
+        ("quantity", Types.LONG()),
+        ("reserved_quantity", Types.LONG()),
+        ("updated_at", Types.STRING()),
+    ],
+
+    "website_events": [
+        ("event_id", Types.STRING()),
+        ("customer_id", Types.LONG()),
+        ("session_id", Types.STRING()),
+        ("event_type", Types.STRING()),
+        ("product_id", Types.LONG()),
+        ("event_timestamp", Types.STRING()),
+        ("device", Types.STRING()),
+        ("browser", Types.STRING()),
+        ("ip_address", Types.STRING()),
+    ],
+
+    "support_tickets": [
+        ("ticket_id", Types.LONG()),
+        ("customer_id", Types.LONG()),
+        ("created_at", Types.STRING()),
+        ("category", Types.STRING()),
+        ("priority", Types.STRING()),
+        ("message", Types.STRING()),
+        ("status", Types.STRING()),
+        ("resolution_time_minutes", Types.LONG()),
+    ],
+
+    "marketing_events": [
+        ("marketing_event_id", Types.LONG()),
+        ("campaign_id", Types.LONG()),
+        ("customer_id", Types.LONG()),
+        ("campaign", Types.STRING()),
+        ("channel", Types.STRING()),
+        ("impression", Types.LONG()),
+        ("click", Types.LONG()),
+        ("conversion", Types.LONG()),
+        ("cost", Types.DOUBLE()),
+        ("event_timestamp", Types.STRING()),
+    ],
+}
+
 
 # ============================================================
 # PRIMARY KEYS
 # ============================================================
 
 PRIMARY_KEYS = {
-    "customers": ["customer_id"],
-    "products": ["product_id"],
-    "orders": ["order_id"],
-    "order_items": ["order_item_id"],
-    "payments": ["payment_id"],
-    "inventory": ["inventory_id"],
-    "website_events": ["event_id"],
-    "support_tickets": ["ticket_id"],
-    "marketing_events": ["marketing_event_id"],
+    "customers": "customer_id",
+    "products": "product_id",
+    "orders": "order_id",
+    "order_items": "order_item_id",
+    "payments": "payment_id",
+    "inventory": "inventory_id",
+    "website_events": "event_id",
+    "support_tickets": "ticket_id",
+    "marketing_events": "marketing_event_id",
 }
 
-# ============================================================
-# TIMESTAMP COLUMNS
-# ============================================================
-
-TIMESTAMP_COLUMNS = {
-    "customers": [
-        "signup_date",
-        "updated_at",
-        "created_at",
-    ],
-    "products": [
-        "created_at",
-        "updated_at",
-    ],
-    "orders": [
-        "order_date",
-        "created_at",
-        "updated_at",
-    ],
-    "order_items": [],
-    "payments": [
-        "transaction_timestamp",
-    ],
-    "inventory": [
-        "updated_at",
-    ],
-    "website_events": [
-        "event_timestamp",
-    ],
-    "support_tickets": [
-        "created_at",
-    ],
-    "marketing_events": [
-        "event_timestamp",
-    ],
-}
 
 # ============================================================
-# SPARK SESSION
+# CDC PARSER
 # ============================================================
 
-def create_spark_session():
+class DebeziumParser(MapFunction):
 
-    spark = (
-        SparkSession.builder
-        .appName("RetailPulse - Bronze CDC to Silver")
-        # Keep local Spark/MinIO writes bounded on a Windows development host.
-        .master("local[2]")
-        .config("spark.default.parallelism", "2")
-        .config("spark.sql.shuffle.partitions", "4")
-        .config(
-            "spark.jars.packages",
-            HADOOP_AWS_PACKAGE,
-        )
-        .config(
-            "spark.hadoop.fs.s3a.endpoint",
-            MINIO_ENDPOINT,
-        )
-        .config(
-            "spark.hadoop.fs.s3a.access.key",
-            MINIO_ACCESS_KEY,
-        )
-        .config(
-            "spark.hadoop.fs.s3a.secret.key",
-            MINIO_SECRET_KEY,
-        )
-        .config(
-            "spark.hadoop.fs.s3a.path.style.access",
-            "true",
-        )
-        .config(
-            "spark.hadoop.fs.s3a.connection.ssl.enabled",
-            "false",
-        )
-        .config(
-            "spark.hadoop.fs.s3a.aws.credentials.provider",
-            "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
-        )
-        .config(
-            "spark.hadoop.fs.s3a.impl",
-            "org.apache.hadoop.fs.s3a.S3AFileSystem",
-        )
-        # Avoid Hadoop's disk-backed Windows upload path, which requires an
-        # unavailable NativeIO Windows library.
-        .config(
-            "spark.hadoop.fs.s3a.fast.upload.buffer",
-            "array",
-        )
-        .config(
-            "spark.sql.parquet.compression.codec",
-            "snappy",
-        )
-        .getOrCreate()
-    )
+    def __init__(self, table_name):
+        self.table_name = table_name
 
-    spark.sparkContext.setLogLevel("WARN")
+    def map(self, message):
 
-    return spark
+        try:
 
+            data = json.loads(message)
 
-# ============================================================
-# READ BRONZE
-# ============================================================
+            payload = data.get("payload", data)
 
-def read_bronze_table(spark, table_name):
+            op = payload.get("op")
 
-    path = f"{BRONZE_BASE}/{table_name}"
+            ts_ms = payload.get("ts_ms")
 
-    print()
-    print("=" * 70)
-    print(f"Reading Bronze: {table_name}")
-    print(f"Path: {path}")
-    print("=" * 70)
+            before = payload.get("before")
+            after = payload.get("after")
 
-    # Flink FileSink writes files under time-bucket directories rather than
-    # directly at the table root.  Recursively discover those Parquet parts.
-    df = (
-        spark.read
-        .option("recursiveFileLookup", "true")
-        .parquet(path)
-    )
+            # ------------------------------------------------
+            # DELETE
+            # ------------------------------------------------
 
-    print(f"Bronze rows: {df.count()}")
+            if op == "d":
+                record = before
 
-    return df
+            else:
+                record = after
 
+            if record is None:
+                return None
 
-# ============================================================
-# VALIDATE BRONZE CDC METADATA
-# ============================================================
+            result = {}
 
-def validate_metadata(df, table_name):
+            for field_name, _ in SCHEMAS[self.table_name]:
 
-    required_columns = [
-        "_op",
-        "_ts_ms",
-        "_ingested_at",
-        "_source_table",
-    ]
+                result[field_name] = record.get(
+                    field_name
+                )
 
-    missing = [
-        column
-        for column in required_columns
-        if column not in df.columns
-    ]
+            # ------------------------------------------------
+            # CDC metadata
+            # ------------------------------------------------
 
-    if missing:
+            result["_op"] = op
 
-        raise ValueError(
-            f"{table_name}: Missing Bronze CDC metadata columns: {missing}"
-        )
+            result["_ts_ms"] = ts_ms
 
-    print(
-        f"{table_name}: CDC metadata columns validated"
-    )
+            result["_source_table"] = self.table_name
 
-
-# ============================================================
-# NORMALIZE CDC METADATA
-# ============================================================
-
-def normalize_metadata(df, table_name):
-
-    df = (
-        df
-        .withColumn(
-            "_op",
-            F.upper(F.trim(F.col("_op")))
-        )
-        .withColumn(
-            "_ts_ms",
-            F.col("_ts_ms").cast("long")
-        )
-        .withColumn(
-            "_ingested_at",
-            F.to_timestamp(F.col("_ingested_at"))
-        )
-        .withColumn(
-            "_source_table",
-            F.trim(F.col("_source_table"))
-        )
-    )
-
-    # Make sure the source table is correct
-    df = df.withColumn(
-        "_source_table",
-        F.lit(table_name)
-    )
-
-    return df
-
-
-# ============================================================
-# VALIDATE CDC OPERATIONS
-# ============================================================
-
-def validate_operations(df, table_name):
-
-    invalid_ops = (
-        df
-        .filter(
-            ~F.col("_op").isin(
-                "R",
-                "C",
-                "U",
-                "D",
+            result["_processed_at"] = (
+                datetime.now(timezone.utc).isoformat()
             )
+
+            return result
+
+        except Exception as exc:
+
+            print(
+                f"ERROR parsing {self.table_name}: {exc}"
+            )
+
+            return None
+
+
+# ============================================================
+# SILVER TRANSFORMATION
+# ============================================================
+
+class StreamingSilverTransform(MapFunction):
+
+    def __init__(self, table_name):
+
+        self.table_name = table_name
+        self.primary_key = PRIMARY_KEYS[table_name]
+
+    def map(self, record):
+
+        if record is None:
+            return None
+
+        op = record.get("_op")
+
+        # ----------------------------------------------------
+        # Normalize CDC operation
+        # ----------------------------------------------------
+
+        if op is not None:
+            op = str(op).upper()
+
+        record["_op"] = op
+
+        # ----------------------------------------------------
+        # Normalize timestamp
+        # ----------------------------------------------------
+
+        ts_ms = record.get("_ts_ms")
+
+        if ts_ms is not None:
+
+            try:
+                record["_ts_ms"] = int(ts_ms)
+
+            except (TypeError, ValueError):
+
+                record["_ts_ms"] = None
+
+        # ----------------------------------------------------
+        # Validate operation
+        # ----------------------------------------------------
+
+        if op not in ("R", "C", "U", "D"):
+
+            print(
+                f"WARNING: Invalid CDC operation "
+                f"{op} for {self.table_name}"
+            )
+
+            return None
+
+        # ----------------------------------------------------
+        # DELETE
+        # ----------------------------------------------------
+
+        if op == "D":
+
+            return record
+
+        # ----------------------------------------------------
+        # Silver record
+        # ----------------------------------------------------
+
+        result = {}
+
+        for field_name, _ in SCHEMAS[self.table_name]:
+
+            result[field_name] = record.get(
+                field_name
+            )
+
+        # Keep CDC information needed downstream.
+        result["_op"] = op
+        result["_ts_ms"] = record.get("_ts_ms")
+        result["_source_table"] = self.table_name
+        result["_silver_processed_at"] = (
+            datetime.now(timezone.utc).isoformat()
         )
-        .select("_op")
-        .distinct()
-        .collect()
+
+        return result
+
+
+# ============================================================
+# KAFKA SOURCE
+# ============================================================
+
+def create_kafka_source(topic, table_name):
+
+    return (
+        KafkaSource.builder()
+        .set_bootstrap_servers(KAFKA_BOOTSTRAP)
+        .set_topics(topic)
+        .set_group_id(
+            f"retailpulse-streaming-silver-{table_name}"
+        )
+        .set_starting_offsets(
+            KafkaOffsetsInitializer.earliest()
+        )
+        .set_value_only_deserializer(
+            SimpleStringSchema()
+        )
+        .build()
     )
 
-    if invalid_ops:
 
-        invalid_values = [
-            row["_op"]
-            for row in invalid_ops
+# ============================================================
+# PARQUET SCHEMA
+# ============================================================
+
+def create_row_type(table_name):
+
+    fields = []
+
+    for name, field_type in SCHEMAS[table_name]:
+
+        if field_type == Types.LONG():
+            fields.append(
+                (name, Types.LONG())
+            )
+
+        elif field_type == Types.DOUBLE():
+            fields.append(
+                (name, Types.DOUBLE())
+            )
+
+        else:
+            fields.append(
+                (name, Types.STRING())
+            )
+
+    fields.extend(
+        [
+            ("_op", Types.STRING()),
+            ("_ts_ms", Types.LONG()),
+            ("_source_table", Types.STRING()),
+            (
+                "_silver_processed_at",
+                Types.STRING(),
+            ),
         ]
-
-        raise ValueError(
-            f"{table_name}: Invalid CDC operations: {invalid_values}"
-        )
-
-    print(
-        f"{table_name}: CDC operations validated"
     )
 
-
-# ============================================================
-# SHOW CDC DISTRIBUTION
-# ============================================================
-
-def show_cdc_distribution(df, table_name):
-
-    print(f"{table_name}: CDC operation distribution")
-
-    (
-        df
-        .groupBy("_op")
-        .count()
-        .orderBy("_op")
-        .show(truncate=False)
-    )
-
-
-# ============================================================
-# DEDUPLICATE CDC EVENTS
-# ============================================================
-
-def deduplicate_latest(df, table_name):
-
-    primary_keys = PRIMARY_KEYS[table_name]
-
-    print(
-        f"{table_name}: Deduplicating using primary key "
-        f"{primary_keys}"
-    )
-
-    window = (
-        Window
-        .partitionBy(
-            *[
-                F.col(column)
-                for column in primary_keys
-            ]
-        )
-        .orderBy(
-            F.col("_ts_ms").desc_nulls_last(),
-            F.col("_ingested_at").desc_nulls_last(),
-        )
-    )
-
-    df = (
-        df
-        .withColumn(
-            "_row_number",
-            F.row_number().over(window)
-        )
-        .filter(
-            F.col("_row_number") == 1
-        )
-        .drop("_row_number")
-    )
-
-    return df
-
-
-# ============================================================
-# APPLY DELETE SEMANTICS
-# ============================================================
-
-def apply_delete_semantics(df, table_name):
-
-    before_count = df.count()
-
-    df = df.filter(
-        F.col("_op") != "D"
-    )
-
-    after_count = df.count()
-
-    deleted = before_count - after_count
-
-    print(
-        f"{table_name}: Removed {deleted} deleted records"
-    )
-
-    return df
-
-
-# ============================================================
-# CLEAN SILVER DATA
-# ============================================================
-
-def clean_silver(df, table_name):
-
-    # Remove Bronze CDC metadata.
-    bronze_metadata = [
-        "_op",
-        "_ts_ms",
-        "_ingested_at",
-        "_source_table",
+    names = [
+        field[0]
+        for field in fields
     ]
 
-    columns_to_drop = [
-        column
-        for column in bronze_metadata
-        if column in df.columns
+    types = [
+        field[1]
+        for field in fields
     ]
 
-    df = df.drop(*columns_to_drop)
-
-    # Add Silver processing timestamp.
-    df = df.withColumn(
-        "_silver_processed_at",
-        F.current_timestamp()
+    return RowTypeInfo(
+        types,
+        names
     )
-
-    return df
 
 
 # ============================================================
-# NORMALIZE TIMESTAMP COLUMNS
+# DICT → ROW
 # ============================================================
 
-def normalize_timestamps(df, table_name):
+class DictToRow(MapFunction):
 
-    timestamp_columns = TIMESTAMP_COLUMNS.get(
-        table_name,
-        []
+    def __init__(self, table_name):
+
+        self.table_name = table_name
+        self.row_type = create_row_type(table_name)
+
+    def map(self, record):
+
+        if record is None:
+            return None
+
+        values = []
+
+        for field_name, _ in SCHEMAS[self.table_name]:
+
+            values.append(
+                record.get(field_name)
+            )
+
+        values.append(
+            record.get("_op")
+        )
+
+        values.append(
+            record.get("_ts_ms")
+        )
+
+        values.append(
+            record.get("_source_table")
+        )
+
+        values.append(
+            record.get("_silver_processed_at")
+        )
+
+        from pyflink.common import Row
+
+        return Row(*values)
+
+
+# ============================================================
+# FILE SINK
+# ============================================================
+
+def create_file_sink(table_name):
+
+    row_type = create_row_type(table_name)
+
+    output_path = (
+        f"{SILVER_BASE}/{table_name}"
     )
 
-    for column in timestamp_columns:
-
-        if column not in df.columns:
-            continue
-
-        # If the column is already timestamp,
-        # leave it alone.
-        if dict(df.dtypes).get(column) == "timestamp":
-            continue
-
-        value = F.trim(F.col(column).cast("string"))
-
-        # Debezium source fields can arrive either as ISO-8601 strings or as
-        # epoch milliseconds.  ``try_to_timestamp`` keeps ANSI mode from
-        # rejecting the numeric representation before the epoch branch runs.
-        df = df.withColumn(
-            column,
-            F.when(
-                value.rlike(r"^[0-9]+$"),
-                F.to_timestamp(
-                    F.from_unixtime(value.cast("double") / F.lit(1000))
-                ),
-            ).otherwise(
-                F.try_to_timestamp(value)
+    return (
+        FileSink
+        .for_bulk_format(
+            output_path,
+            ParquetBulkWriters.for_row_type(
+                row_type
             ),
         )
-
-    return df
-
-
-# ============================================================
-# WRITE SILVER
-# ============================================================
-
-def write_silver(df, table_name):
-
-    output_path = f"{SILVER_BASE}/{table_name}"
-
-    print(
-        f"{table_name}: Writing Silver -> {output_path}"
-    )
-
-    (
-        df
-        .coalesce(2)
-        .write
-        .mode("overwrite")
-        .parquet(output_path)
+        .with_output_file_config(
+            OutputFileConfig.builder()
+            .with_part_prefix(
+                f"{table_name}-part"
+            )
+            .with_part_suffix(".parquet")
+            .build()
+        )
+        .with_rolling_policy(
+            RollingPolicy.default_rolling_policy(
+                rollover_interval=60_000,
+                inactivity_interval=30_000,
+                max_part_size=128 * 1024 * 1024,
+            )
+        )
+        .build()
     )
 
 
 # ============================================================
-# PROCESS ONE TABLE
+# BUILD TABLE PIPELINE
 # ============================================================
 
-def process_table(spark, table_name):
-
-    print()
-    print("#" * 80)
-    print(f"PROCESSING TABLE: {table_name}")
-    print("#" * 80)
-
-    # --------------------------------------------------------
-    # 1. Read Bronze
-    # --------------------------------------------------------
-
-    df = read_bronze_table(
-        spark,
-        table_name
-    )
-
-    # --------------------------------------------------------
-    # 2. Validate metadata
-    # --------------------------------------------------------
-
-    validate_metadata(
-        df,
-        table_name
-    )
-
-    # --------------------------------------------------------
-    # 3. Normalize metadata
-    # --------------------------------------------------------
-
-    df = normalize_metadata(
-        df,
-        table_name
-    )
-
-    # --------------------------------------------------------
-    # 4. Validate CDC operations
-    # --------------------------------------------------------
-
-    validate_operations(
-        df,
-        table_name
-    )
-
-    # --------------------------------------------------------
-    # 5. Show CDC distribution
-    # --------------------------------------------------------
-
-    show_cdc_distribution(
-        df,
-        table_name
-    )
-
-    # --------------------------------------------------------
-    # 6. Normalize timestamps
-    # --------------------------------------------------------
-
-    df = normalize_timestamps(
-        df,
-        table_name
-    )
-
-    # --------------------------------------------------------
-    # 7. Keep latest event per primary key
-    # --------------------------------------------------------
-
-    df = deduplicate_latest(
-        df,
-        table_name
-    )
-
-    # --------------------------------------------------------
-    # 8. Apply deletes
-    # --------------------------------------------------------
-
-    df = apply_delete_semantics(
-        df,
-        table_name
-    )
-
-    # --------------------------------------------------------
-    # 9. Remove Bronze metadata
-    # --------------------------------------------------------
-
-    df = clean_silver(
-        df,
-        table_name
-    )
-
-    # --------------------------------------------------------
-    # 10. Count final Silver rows
-    # --------------------------------------------------------
-
-    silver_count = df.count()
+def build_table_pipeline(env, table_name, topic):
 
     print(
-        f"{table_name}: Final Silver rows = {silver_count}"
+        f"Building streaming Silver: "
+        f"{table_name}"
     )
 
-    # --------------------------------------------------------
-    # 11. Show schema
-    # --------------------------------------------------------
-
-    print(
-        f"{table_name}: Silver schema"
-    )
-
-    df.printSchema()
-
-    # --------------------------------------------------------
-    # 12. Write Silver
-    # --------------------------------------------------------
-
-    write_silver(
-        df,
+    source = create_kafka_source(
+        topic,
         table_name
     )
 
-    print(
-        f"{table_name}: Silver processing COMPLETE"
+    stream = (
+        env.from_source(
+            source,
+            WatermarkStrategy.no_watermarks(),
+            f"Kafka - {table_name}"
+        )
     )
 
-    return silver_count
+    parsed = (
+        stream
+        .map(
+            DebeziumParser(table_name)
+        )
+        .filter(
+            lambda x: x is not None
+        )
+    )
+
+    transformed = (
+        parsed
+        .map(
+            StreamingSilverTransform(
+                table_name
+            )
+        )
+        .filter(
+            lambda x: x is not None
+        )
+    )
+
+    rows = (
+        transformed
+        .map(
+            DictToRow(table_name),
+            output_type=create_row_type(
+                table_name
+            )
+        )
+    )
+
+    sink = create_file_sink(
+        table_name
+    )
+
+    rows.sink_to(
+        sink
+    ).name(
+        f"Silver Sink - {table_name}"
+    )
 
 
 # ============================================================
@@ -593,59 +561,66 @@ def process_table(spark, table_name):
 
 def main():
 
-    print()
     print("=" * 80)
     print("RetailPulse AI")
-    print("Bronze CDC -> Silver Current State")
+    print("STREAMING SILVER PIPELINE")
     print("=" * 80)
 
-    spark = create_spark_session()
+    env = (
+        StreamExecutionEnvironment
+        .get_execution_environment()
+    )
 
-    results = {}
+    env.set_parallelism(2)
 
-    try:
+    # --------------------------------------------------------
+    # Checkpointing
+    # --------------------------------------------------------
 
-        for table_name in TABLES:
+    env.enable_checkpointing(
+        10_000
+    )
 
-            try:
+    checkpoint_config = (
+        env.get_checkpoint_config()
+    )
 
-                count = process_table(
-                    spark,
-                    table_name
-                )
+    checkpoint_config.set_checkpoint_timeout(
+        120_000
+    )
 
-                results[table_name] = count
+    checkpoint_config.set_min_pause_between_checkpoints(
+        30_000
+    )
 
-            except Exception as exc:
+    checkpoint_config.set_max_concurrent_checkpoints(
+        1
+    )
 
-                print()
-                print(
-                    f"ERROR processing {table_name}: {exc}"
-                )
+    # --------------------------------------------------------
+    # Build all streaming Silver pipelines
+    # --------------------------------------------------------
 
-                raise
+    for table_name, topic in TABLES.items():
 
-        # ----------------------------------------------------
-        # FINAL SUMMARY
-        # ----------------------------------------------------
+        build_table_pipeline(
+            env,
+            table_name,
+            topic
+        )
 
-        print()
-        print("=" * 80)
-        print("SILVER PIPELINE COMPLETE")
-        print("=" * 80)
+    # --------------------------------------------------------
+    # Execute
+    # --------------------------------------------------------
 
-        for table_name, count in results.items():
+    env.execute(
+        "RetailPulse - Streaming Silver"
+    )
 
-            print(
-                f"{table_name:<25} {count:>12} rows"
-            )
 
-        print("=" * 80)
-
-    finally:
-
-        spark.stop()
-
+# ============================================================
+# ENTRY POINT
+# ============================================================
 
 if __name__ == "__main__":
     main()

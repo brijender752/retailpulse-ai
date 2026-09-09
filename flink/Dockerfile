@@ -32,6 +32,18 @@ RUN wget -P /opt/flink/lib \
     https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.3.6/hadoop-common-3.3.6.jar
 
 RUN wget -P /opt/flink/lib \
+    https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/3.3.6/hadoop-client-api-3.3.6.jar
+
+RUN wget -P /opt/flink/lib \
+    https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/3.3.6/hadoop-client-runtime-3.3.6.jar
+
+RUN wget -P /opt/flink/lib \
+    https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-hdfs-client/3.3.6/hadoop-hdfs-client-3.3.6.jar
+
+RUN wget -P /opt/flink/lib \
+    https://repo1.maven.org/maven2/org/apache/commons/commons-configuration2/2.8.0/commons-configuration2-2.8.0.jar
+
+RUN wget -P /opt/flink/lib \
     https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-mapreduce-client-core/3.3.6/hadoop-mapreduce-client-core-3.3.6.jar
 
 RUN wget -P /opt/flink/lib \
