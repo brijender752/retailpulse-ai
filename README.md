@@ -22,6 +22,13 @@ Superset / Grafana
     ↓
 GenAI AI Analyst
 
+## Pipeline organization
+
+- `spark/jobs/batch/` — bounded Spark jobs, grouped into Bronze, Silver, and Gold.
+- `flink/jobs/streaming/` — continuous Flink jobs, grouped into Bronze, Silver, and Gold.
+- `flink/jobs/archive/` — historical experiments; do not submit these as active jobs.
+- `docs/architecture/pipelines.md` — pipeline ownership and run commands.
+
 ## Technologies
 
 - Python
@@ -82,7 +89,7 @@ docker exec retailpulse-kafka //opt/kafka/bin/kafka-topics.sh --bootstrap-server
 
 # Flink
 docker compose up -d --build flink-jobmanager flink-taskmanager
-docker exec retailpulse-flink-jobmanager sh -lc 'flink run -py /opt/flink/jobs/retailpulse_bronze.py'
+docker exec retailpulse-flink-jobmanager sh -lc 'flink run -py /opt/flink/jobs/streaming/bronze/retailpulse_bronze.py'
 ```
 
 This avoids needing `MSYS_NO_PATHCONV=1` while preserving the normal single-slash
