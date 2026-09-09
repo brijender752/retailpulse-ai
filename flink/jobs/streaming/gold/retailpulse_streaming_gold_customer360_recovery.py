@@ -59,7 +59,7 @@ double-counting customer metrics.
 import json
 from datetime import datetime, timezone
 
-from pyflink.common import Row, Types
+from pyflink.common import Configuration, Row, Types
 from pyflink.common.serialization import SimpleStringSchema
 from pyflink.common.watermark_strategy import WatermarkStrategy
 
@@ -85,15 +85,46 @@ from pyflink.datastream.state import (
 # CONFIGURATION
 # ============================================================
 
+# ------------------------------------------------------------
+# Recovery-hardened application settings
+#
+# IMPORTANT:
+# Customer 360 CDC/state/aggregation logic below is unchanged.
+# Keep operator UIDs and state descriptor names stable after savepoints exist.
+# ------------------------------------------------------------
+
+JOB_NAME = "RetailPulse - Customer 360 Stateful Recovery"
+JOB_VERSION = "v1"
+
 KAFKA_BOOTSTRAP = "kafka:9092"
 
-GOLD_BASE = (
-    "s3://retailpulse/gold_stream"
+GOLD_BASE = "s3://retailpulse/gold_stream"
+GOLD_DATASET = "customer_360_recovery"
+
+GROUP_ID = "retailpulse-streaming-gold-customer360-recovery-v1"
+
+CHECKPOINT_STORAGE_PATH = (
+    "s3://retailpulse/flink-checkpoints/customer360-recovery"
 )
 
-GROUP_ID = (
-    "retailpulse-streaming-gold-customer360-stateful-v1"
+SAVEPOINT_STORAGE_PATH = (
+    "s3://retailpulse/flink-savepoints/customer360-recovery"
 )
+
+CHECKPOINT_INTERVAL_MS = 30_000
+CHECKPOINT_TIMEOUT_MS = 120_000
+MIN_PAUSE_BETWEEN_CHECKPOINTS_MS = 10_000
+MAX_CONCURRENT_CHECKPOINTS = 1
+DEFAULT_PARALLELISM = 1
+
+# Stable operator UIDs for checkpoint/savepoint mapping.
+UID_CUSTOMERS_SOURCE = "customer360-customers-source-v1"
+UID_ORDERS_SOURCE = "customer360-orders-source-v1"
+UID_PAYMENTS_SOURCE = "customer360-payments-source-v1"
+UID_WEBSITE_SOURCE = "customer360-website-source-v1"
+UID_SUPPORT_SOURCE = "customer360-support-source-v1"
+UID_MARKETING_SOURCE = "customer360-marketing-source-v1"
+UID_CUSTOMER360_PROCESSOR = "customer360-stateful-processor-v1"
 
 
 # ============================================================
@@ -1680,7 +1711,7 @@ def create_kafka_source(
 
 def create_gold_sink(table_env, statement_set, view_name):
 
-    sink_name = "gold_sink_customer_360_stateful"
+    sink_name = "gold_sink_customer_360_recovery"
 
     table_env.execute_sql(
         f"""
@@ -1710,7 +1741,7 @@ def create_gold_sink(table_env, statement_set, view_name):
             `_gold_processed_at` STRING
         ) WITH (
             'connector' = 'filesystem',
-            'path' = '{GOLD_BASE}/customer_360_stateful',
+            'path' = '{GOLD_BASE}/{GOLD_DATASET}',
             'format' = 'parquet'
         )
         """
@@ -1738,7 +1769,7 @@ def main():
     )
 
     print(
-        "Dataset: customer_360_stateful"
+        f"Dataset: {GOLD_DATASET}"
     )
 
     print("=" * 75)
@@ -1747,9 +1778,18 @@ def main():
     # Environment
     # --------------------------------------------------------
 
-    env = (
-        StreamExecutionEnvironment
-        .get_execution_environment()
+    flink_config = Configuration()
+    flink_config.set_string(
+        "execution.checkpointing.dir",
+        CHECKPOINT_STORAGE_PATH,
+    )
+    flink_config.set_string(
+        "execution.checkpointing.savepoint-dir",
+        SAVEPOINT_STORAGE_PATH,
+    )
+
+    env = StreamExecutionEnvironment.get_execution_environment(
+        flink_config
     )
 
     table_env = StreamTableEnvironment.create(env)
@@ -1757,21 +1797,22 @@ def main():
 
     # One subtask per source keeps this six-topic local job within the
     # TaskManager's development slot budget.
-    env.set_parallelism(1)
+    env.set_parallelism(DEFAULT_PARALLELISM)
 
-    # Filesystem sinks commit their pending Parquet files only after a
-    # successful checkpoint.  Without this, the job can consume records but
-    # Gold output never becomes visible in MinIO.
-    env.enable_checkpointing(10_000)
+    # Filesystem sinks commit pending Parquet files only after a successful
+    # checkpoint. Durable MinIO checkpoint storage also preserves managed
+    # keyed state for TaskManager/container recovery.
+    env.enable_checkpointing(CHECKPOINT_INTERVAL_MS)
     checkpoint_config = env.get_checkpoint_config()
-    checkpoint_config.set_checkpoint_timeout(120_000)
-    checkpoint_config.set_min_pause_between_checkpoints(30_000)
-    checkpoint_config.set_max_concurrent_checkpoints(1)
-
-    checkpoint_config.set_checkpoint_storage(
-    "s3://retailpulse/flink-checkpoints/customer360-stateful"
+    checkpoint_config.set_checkpoint_timeout(CHECKPOINT_TIMEOUT_MS)
+    checkpoint_config.set_min_pause_between_checkpoints(
+        MIN_PAUSE_BETWEEN_CHECKPOINTS_MS
     )
-            # CUSTOMER SOURCE
+    checkpoint_config.set_max_concurrent_checkpoints(
+        MAX_CONCURRENT_CHECKPOINTS
+    )
+    # --------------------------------------------------------
+    # CUSTOMER SOURCE
     # --------------------------------------------------------
 
     customer_source = (
@@ -1794,7 +1835,7 @@ def main():
         .filter(
             lambda x: x is not None,
         )
-        .uid("customer360-customers-source")
+        .uid(UID_CUSTOMERS_SOURCE)
     )
 
     # --------------------------------------------------------
@@ -1821,7 +1862,7 @@ def main():
         .filter(
             lambda x: x is not None,
         )
-        .uid("customer360-orders-source")
+        .uid(UID_ORDERS_SOURCE)
     )
 
     # --------------------------------------------------------
@@ -1848,7 +1889,7 @@ def main():
         .filter(
             lambda x: x is not None,
         )
-        .uid("customer360-payments-source")
+        .uid(UID_PAYMENTS_SOURCE)
     )
 
     # --------------------------------------------------------
@@ -1875,7 +1916,7 @@ def main():
         .filter(
             lambda x: x is not None,
         )
-        .uid("customer360-website-source")
+        .uid(UID_WEBSITE_SOURCE)
     )
 
     # --------------------------------------------------------
@@ -1902,7 +1943,7 @@ def main():
         .filter(
             lambda x: x is not None,
         )
-        .uid("customer360-support-source")
+        .uid(UID_SUPPORT_SOURCE)
     )
 
     # --------------------------------------------------------
@@ -1929,7 +1970,7 @@ def main():
         .filter(
             lambda x: x is not None,
         )
-        .uid("customer360-marketing-source")
+        .uid(UID_MARKETING_SOURCE)
     )
 
     # ========================================================
@@ -2011,13 +2052,15 @@ def main():
             Customer360ProcessFunction(),
             output_type=gold_type,
         )
+        .name("Customer 360 Stateful Processor")
+        .uid(UID_CUSTOMER360_PROCESSOR)
     )
 
     # ========================================================
     # SINK
     # ========================================================
 
-    view_name = "gold_customer_360_stateful_view"
+    view_name = "gold_customer_360_recovery_view"
     table_env.create_temporary_view(
         view_name,
         customer_360,
@@ -2034,9 +2077,12 @@ def main():
     # ========================================================
 
     print(
-        "Submitting production-stateful Customer 360..."
+        f"Submitting {JOB_NAME}..."
     )
 
+    # PyFlink's StatementSet.execute() has no job-name parameter in the
+    # bundled version.  Airflow supplies `pipeline.name` through the Flink CLI
+    # when it submits this job.
     statement_set.execute()
 
 
