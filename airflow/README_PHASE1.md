@@ -232,3 +232,13 @@ All of those will be attached to Airflow instead of being independent
 manual scripts.
 
 — `bj_kush`
+
+
+to run it
+cd C:\Users\dell\projects\retailpulse-ai\airflow
+
+docker compose --env-file .env -f docker-compose.airflow.yml build
+
+docker compose --env-file .env -f docker-compose.airflow.yml up airflow-init
+
+docker compose --env-file .env -f docker-compose.airflow.yml up -d

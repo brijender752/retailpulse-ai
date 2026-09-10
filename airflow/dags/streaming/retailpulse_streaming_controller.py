@@ -46,7 +46,7 @@ from retailpulse.minio_validation import (
     catchup=False,
     max_active_runs=1,
     dagrun_timeout=timedelta(
-        minutes=10
+        minutes=30
     ),
     tags=[
         "retailpulse",
@@ -148,16 +148,16 @@ def retailpulse_streaming_controller():
     # ========================================================
 
     @task(
-        retries=3,
-        retry_delay=timedelta(
-            seconds=30
-        ),
+        retries=0,
+        execution_timeout=timedelta(minutes=11),
     )
     def customer360_checkpoint():
         return validate_job_checkpoint(
             FLINK_JOBS[
                 "gold_customer360_recovery"
-            ]["job_name"]
+            ]["job_name"],
+            timeout_seconds=600,
+            poll_interval_seconds=30,
         )
 
     checkpoint_ok = (

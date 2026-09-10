@@ -493,10 +493,63 @@ services:
       - ./flink/jobs:/opt/flink/jobs
       - flink_checkpoints:/tmp/flink-checkpoints   
 
+  spark:
+    image: apache/spark:4.0.1
+
+    container_name: retailpulse-spark
+
+    hostname: spark
+
+    user: root
+
+    command:
+      - /bin/bash
+      - -c
+      - |
+        tail -f /dev/null
+
+    volumes:
+      - ./:/opt/retailpulse
+
+    environment:
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+
+    networks:
+      - retailpulse
+
+    depends_on:
+      - minio
+  
+
+  spark-iceberg:
+    build:
+      context: .
+      dockerfile: spark/iceberg/Dockerfile
+    container_name: retailpulse-spark-iceberg
+    hostname: spark-iceberg
+    user: root
+    command: ["bash", "-lc", "tail -f /dev/null"]
+    volumes:
+      - ./:/opt/retailpulse
+      - spark-iceberg-ivy:/root/.ivy2
+    environment:
+      ICEBERG_VERSION: "1.11.0"
+      HADOOP_AWS_PACKAGE: "org.apache.hadoop:hadoop-aws:3.4.1"
+      MINIO_S3A_ENDPOINT: "http://minio:9000"
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_SECRET_KEY: "minioadmin"
+      ICEBERG_WAREHOUSE: "s3a://retailpulse/warehouse"
+    networks:
+      - retailpulse
+    depends_on:
+      - minio
+
 networks:
   retailpulse:
     driver: bridge
-
+    
+    
 # ============================================================
 # Volumes
 # ============================================================
@@ -508,3 +561,4 @@ volumes:
   minio_data:
   kafka_data:
   flink_checkpoints:
+  spark-iceberg-ivy:

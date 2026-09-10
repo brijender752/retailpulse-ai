@@ -1,5 +1,7 @@
+import logging
 import re
 import shlex
+import time
 from pathlib import PurePosixPath
 
 import docker
@@ -262,33 +264,42 @@ def checkpoint_statistics(
 
 def validate_job_checkpoint(
     job_name: str,
+    timeout_seconds: float = 0,
+    poll_interval_seconds: float = 30,
 ) -> dict:
+    """Wait up to the timeout for an active job's first completed checkpoint."""
+    if timeout_seconds < 0 or poll_interval_seconds <= 0:
+        raise ValueError("Timeout must be nonnegative and poll interval positive.")
 
-    job = find_job_by_name(
-        job_name
-    )
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        job = find_job_by_name(job_name)
 
-    if not job:
-        raise RuntimeError(
-            f"Flink job not found: {job_name}"
+        if not job:
+            raise RuntimeError(f"Flink job not found: {job_name}")
+
+        if job.get("state") not in RUNNING_STATES:
+            raise RuntimeError(f"{job_name} is {job.get('state')}")
+
+        stats = checkpoint_statistics(job["jid"])
+        if stats["completed"] >= 1:
+            return {
+                "job_name": job_name,
+                "state": job.get("state"),
+                **stats,
+            }
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise RuntimeError(
+                f"{job_name} has no completed checkpoint after waiting up to "
+                f"{timeout_seconds}s. Job ID: {job['jid']}; "
+                f"state: {job.get('state')}; checkpoint statistics: {stats}"
+            )
+        logging.getLogger(__name__).info(
+            "Waiting for %s checkpoint: state=%s, in_progress=%s, failed=%s; "
+            "%.0fs remaining",
+            job_name, job.get("state"), stats["in_progress"],
+            stats["failed"], remaining,
         )
-
-    if job.get("state") not in RUNNING_STATES:
-        raise RuntimeError(
-            f"{job_name} is {job.get('state')}"
-        )
-
-    stats = checkpoint_statistics(
-        job["jid"]
-    )
-
-    if stats["completed"] < 1:
-        raise RuntimeError(
-            f"{job_name} has no completed checkpoint yet."
-        )
-
-    return {
-        "job_name": job_name,
-        "state": job.get("state"),
-        **stats,
-    }
+        time.sleep(min(poll_interval_seconds, remaining))
