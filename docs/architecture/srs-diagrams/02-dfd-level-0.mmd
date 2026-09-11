@@ -1,0 +1,8 @@
+flowchart LR
+  OP["E1: Data engineer / platform operator"]
+  P0("0: RetailPulse data platform")
+  CON["E2: Analytics consumer / SQL client"]
+  OP -->|"Generation settings, pipeline configuration, run requests"| P0
+  P0 -->|"Run status, health, validation results, logs"| OP
+  CON -->|"SQL analytical queries"| P0
+  P0 -->|"Customer, order, payment and product results"| CON

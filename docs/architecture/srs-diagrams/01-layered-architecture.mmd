@@ -1,0 +1,61 @@
+flowchart TB
+  subgraph L1["1. Source and operational layer"]
+    GEN["Python data generator"]
+    PG[("PostgreSQL 16 / ecommerce schema")]
+    GEN -->|"SQL inserts and transactional workload"| PG
+  end
+  subgraph L2["2. Change capture and transport"]
+    DBZ["Debezium 3.3.2 / Kafka Connect"]
+    K[("Kafka 4.0.1 / KRaft / nine CDC topics")]
+    PG -->|"Initial snapshot and logical WAL changes"| DBZ
+    DBZ -->|"JSON CDC envelopes"| K
+  end
+  subgraph L3["3. Continuous processing / Flink 2.1.0 / PyFlink"]
+    FB["Bronze CDC job"]
+    FS["Silver normalization job"]
+    FG["Gold jobs: orders, payments, products, Customer 360"]
+    K -->|"Independent topic subscriptions"| FB
+    K -->|"Independent topic subscriptions"| FS
+    K -->|"Selected topic subscriptions"| FG
+  end
+  subgraph L4["4. Object storage / MinIO / Parquet"]
+    B[("bronze/entity/")]
+    S[("silver_stream/entity/")]
+    G[("gold_stream/dataset/")]
+    CP[("Customer 360 checkpoints and savepoints")]
+    FB -->|"CDC rows and metadata"| B
+    FS -->|"Normalized change records"| S
+    FG -->|"Business output records"| G
+    FG -->|"Recovery state"| CP
+    CP -->|"Restored state"| FG
+  end
+  subgraph L5["5. Lakehouse processing / Spark 4.0.1 / Iceberg"]
+    INC["Incremental CDC MERGE / five-minute DAG"]
+    IS[("retailpulse.silver / current entity state")]
+    WM[("retailpulse.control.cdc_watermarks")]
+    GM["Spark Gold builds"]
+    IG[("retailpulse.gold / business tables")]
+    B -->|"Finalized CDC Parquet"| INC
+    WM -->|"Previous timestamp per entity"| INC
+    INC -->|"Committed progress"| WM
+    INC -->|"Insert, update, delete"| IS
+    IS -->|"Current rows"| GM
+    GM -->|"Replace business tables"| IG
+  end
+  subgraph L6["6. Analytics transformation and SQL access"]
+    DBT["dbt Core + dbt-spark / ephemeral staging / tests"]
+    TH["Spark Thrift Server / port 10000"]
+    AN[("Iceberg analytics tables / dimensions, facts, customer value")]
+    DBT -->|"Compiled SQL through Thrift"| TH
+    IS -->|"Source rows"| TH
+    TH -->|"Materialized Iceberg tables"| AN
+    TH -->|"Execution and test results"| DBT
+    AN -->|"Query data"| TH
+  end
+  AF["Airflow 3.3.1 / LocalExecutor / health, submission, validation"]
+  AF -.->|"Start and inspect jobs"| FB
+  AF -.->|"Start and inspect jobs"| FS
+  AF -.->|"Start, restore, inspect checkpoints"| FG
+  AF -.->|"Submit Spark jobs"| INC
+  AF -.->|"Submit builds and validation"| GM
+  AF -.->|"Manual analytics DAG"| DBT

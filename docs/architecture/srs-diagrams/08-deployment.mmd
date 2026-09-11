@@ -1,0 +1,40 @@
+flowchart TB
+  OP["Operator"]
+  subgraph AF["Airflow Compose stack"]
+    API["API server / UI :8090"]
+    SCH["Scheduler / LocalExecutor"]
+    DP["DAG processor"]
+    TR["Triggerer"]
+    MDB[("airflow-db / PostgreSQL")]
+    LOG[("Task logs")]
+    DP -->|"Parsed DAG metadata"| MDB
+    SCH -->|"Run and task state"| MDB
+    MDB -->|"Scheduling metadata"| SCH
+    API -->|"Metadata queries"| MDB
+    TR -->|"Trigger state"| MDB
+    SCH -->|"Task logs"| LOG
+  end
+  subgraph RP["RetailPulse Docker bridge network"]
+    PG["PostgreSQL"]
+    DEB["Debezium"]
+    K["Kafka + Kafka UI"]
+    JM["Flink JobManager"]
+    TM["Flink TaskManager"]
+    SP["spark-iceberg / spark-submit"]
+    DB["dbt container"]
+    TH["spark-thrift"]
+    MI[("MinIO")]
+  end
+  OP -->|"Run requests and inspection"| API
+  SCH -.->|"Docker SDK: submit PyFlink; REST: inspect"| JM
+  JM -.->|"Task deployment"| TM
+  SCH -.->|"Docker SDK: spark-submit"| SP
+  SCH -.->|"Docker SDK: dbt commands"| DB
+  DB -->|"SQL via Thrift"| TH
+  TH -->|"S3A reads and writes"| MI
+  SP -->|"S3A reads and writes"| MI
+  TM -->|"S3 file output and recovery"| MI
+  SCH -.->|"Health checks"| PG
+  SCH -.->|"Connector status"| DEB
+  SCH -.->|"Connectivity checks"| K
+  SCH -.->|"Bucket and output checks"| MI

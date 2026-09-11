@@ -1,0 +1,40 @@
+flowchart TB
+    purpose["RetailPulse AI: e-commerce analytics<br/>Orders, payments, products, customer behavior and value"]
+    gen["Python synthetic data generator"] --> pg["PostgreSQL: 9 ecommerce tables"]
+    pg --> dbz["Debezium: initial snapshot + change capture"]
+    dbz --> kafka["Kafka: one CDC topic per table"]
+    kafka --> fb["Flink Bronze: CDC records + metadata"]
+    kafka --> fs["Flink Silver: normalize CDC events"]
+    kafka --> fg["Flink Gold: stateful business aggregates"]
+    fb --> bronze["MinIO bronze/: Parquet CDC history"]
+    fs --> streamSilver["MinIO silver_stream/: normalized event output"]
+    fg --> streamGold["MinIO gold_stream/: orders, payments,<br/>products, Customer 360"]
+    fg -. recovery .-> checkpoints["MinIO checkpoints / savepoints<br/>Customer 360 recovery"]
+    bronze --> bootstrap["Manual bootstrap: Parquet to Iceberg Bronze"]
+    bootstrap --> initial["Spark: initial current-state MERGE"]
+    initial --> silver["Iceberg Silver: latest records in 9 tables<br/>Physical storage: MinIO warehouse/"]
+    bronze --> incremental["Spark incremental CDC MERGE<br/>5-minute schedule; watermark + lookback"]
+    incremental --> silver
+    incremental <--> watermarks["Iceberg control.cdc_watermarks"]
+    silver --> sparkGold["Spark Gold rebuild"]
+    sparkGold --> gold["Iceberg Gold: order_summary,<br/>product_performance, customer_360"]
+    silver --> dbt["dbt SQL via Spark Thrift<br/>8 ephemeral staging models"]
+    dbt --> dims["Dimensions: customer, product, date"]
+    dbt --> facts["Facts: orders, payments, customer activity"]
+    dims --> mart["mart_customer_value<br/>Spend, payments, engagement, value segments"]
+    facts --> mart
+    dbt -. validates .-> tests["dbt tests + generated documentation"]
+    mart -. validates .-> tests
+    pg --> batch["Separate manual Spark JDBC batch path"]
+    batch --> parquet["MinIO Parquet Bronze → Silver → Gold<br/>Shares bronze/ with CDC path"]
+    airflow["Airflow control plane<br/>Health + streaming: every 5 min<br/>Incremental Iceberg: every 5 min<br/>Bootstrap + dbt: manual; maintenance: 02:00 UTC"]
+    airflow -. starts / monitors .-> fb
+    airflow -. starts / monitors .-> fs
+    airflow -. starts / restores .-> fg
+    airflow -. submits .-> bootstrap
+    airflow -. submits .-> incremental
+    airflow -. runs .-> dbt
+    airflow -. compacts Silver / Gold .-> gold
+    future["Roadmap only: dashboards, ML, GenAI analyst, serving API"]
+    mart -. future use .-> future
+    purpose ~~~ gen

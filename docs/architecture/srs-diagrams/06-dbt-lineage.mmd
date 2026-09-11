@@ -1,0 +1,41 @@
+flowchart LR
+  SIL[("Iceberg Silver")]
+  C["stg_customers"]
+  P["stg_products"]
+  O["stg_orders"]
+  I["stg_order_items"]
+  PAY["stg_payments"]
+  W["stg_website_events"]
+  S["stg_support_tickets"]
+  M["stg_marketing_events"]
+  DC[("dim_customer")]
+  DP[("dim_product")]
+  DT[("dim_date")]
+  FO[("fact_orders")]
+  FP[("fact_payments")]
+  FA[("fact_customer_activity")]
+  MV[("mart_customer_value")]
+  SIL --> C
+  SIL --> P
+  SIL --> O
+  SIL --> I
+  SIL --> PAY
+  SIL --> W
+  SIL --> S
+  SIL --> M
+  C --> DC
+  P --> DP
+  O --> DT
+  O --> FO
+  I --> FO
+  PAY --> FO
+  O --> FP
+  PAY --> FP
+  C --> FA
+  W --> FA
+  S --> FA
+  M --> FA
+  DC --> MV
+  FO --> MV
+  FP --> MV
+  FA --> MV

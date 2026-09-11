@@ -1,0 +1,57 @@
+flowchart TB
+  E1["E1: Operator"]
+  E2["E2: SQL consumer"]
+  P1("1.0 Generate source workload / Python")
+  D1[("D1: PostgreSQL ecommerce tables")]
+  P2("2.0 Capture changes / Debezium")
+  D2[("D2: Kafka CDC topics")]
+  P3("3.0 Process streams / Flink")
+  D3[("D3: Bronze CDC Parquet")]
+  D4[("D4: Silver and Gold streaming Parquet")]
+  D5[("D5: Flink recovery state")]
+  P4("4.0 Build lakehouse / Spark + Iceberg")
+  D6[("D6: Iceberg Bronze, Silver and Gold")]
+  D7[("D7: CDC watermarks")]
+  P5("5.0 Build analytics / dbt + Spark Thrift")
+  D8[("D8: Iceberg analytics marts")]
+  P6("6.0 Serve SQL / Spark Thrift")
+  P7("7.0 Orchestrate and validate / Airflow")
+  D9[("D9: Airflow metadata and task logs")]
+  P8("8.0 Bounded batch / PySpark")
+  D10[("D10: Batch Bronze, Silver and Gold Parquet")]
+  E1 -->|"Generation configuration"| P1
+  P1 -->|"Business records"| D1
+  D1 -->|"Snapshot and WAL"| P2
+  P2 -->|"CDC messages"| D2
+  D2 -->|"Entity change streams"| P3
+  P3 -->|"Historical change rows"| D3
+  P3 -->|"Normalized and analytical rows"| D4
+  P3 -->|"Offsets and operator state"| D5
+  D5 -->|"Recovery state"| P3
+  D3 -->|"CDC history and incremental candidates"| P4
+  D4 -->|"Optional Gold bootstrap rows"| P4
+  D6 -->|"Existing rows and snapshots"| P4
+  P4 -->|"Bootstrap tables and refreshed current-state marts"| D6
+  D7 -->|"Previous CDC progress"| P4
+  P4 -->|"New CDC progress"| D7
+  D6 -->|"Silver source rows"| P5
+  P5 -->|"Dimensions, facts, business mart"| D8
+  D8 -->|"Analytical rows"| P6
+  D6 -->|"Lakehouse rows"| P6
+  E2 -->|"SQL queries"| P6
+  P6 -->|"Result sets"| E2
+  E1 -->|"Pipeline settings and run requests"| P7
+  P7 -->|"Run outcomes and validation results"| E1
+  P7 -->|"Run and task records"| D9
+  D9 -->|"Run history and configuration"| P7
+  P7 -->|"Job submission and recovery parameters"| P3
+  P3 -->|"Job and checkpoint status"| P7
+  P7 -->|"Spark job parameters"| P4
+  P4 -->|"Build and validation results"| P7
+  P7 -->|"dbt commands"| P5
+  P5 -->|"Test and documentation results"| P7
+  E1 -->|"Manual batch run request"| P8
+  D1 -->|"JDBC snapshot rows"| P8
+  D10 -->|"Intermediate batch rows"| P8
+  P8 -->|"Snapshot, cleaned and aggregate rows"| D10
+  P8 -->|"Batch logs and counts"| E1

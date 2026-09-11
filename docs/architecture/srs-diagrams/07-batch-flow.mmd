@@ -1,0 +1,14 @@
+flowchart LR
+  PG[("PostgreSQL ecommerce tables")]
+  EX["PySpark JDBC extraction"]
+  B[("MinIO bronze/entity / snapshot Parquet")]
+  CL["PySpark Bronze-to-Silver cleanup"]
+  S[("MinIO silver/entity / Parquet")]
+  AG["PySpark Silver-to-Gold aggregation"]
+  G[("MinIO gold/dataset / Parquet")]
+  PG -->|"JDBC table snapshots"| EX
+  EX -->|"Overwrite with ingestion timestamp"| B
+  B -->|"Raw snapshot rows"| CL
+  CL -->|"Cleaned rows"| S
+  S -->|"Business entities"| AG
+  AG -->|"Business aggregates"| G

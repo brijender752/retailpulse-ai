@@ -1,0 +1,29 @@
+flowchart LR
+  K[("D2: Nine Kafka CDC topics")]
+  B("3.1 Decode and preserve CDC / Bronze job")
+  S("3.2 Normalize CDC rows / Silver job")
+  O("3.3 Build order summary")
+  P("3.4 Build payment summary")
+  R("3.5 Build product performance")
+  C("3.6 Maintain customer state / Customer 360 recovery")
+  DB[("D3: bronze/entity/")]
+  DS[("D4a: silver_stream/entity/")]
+  DG[("D4b: gold_stream/dataset/")]
+  CP[("D5: Checkpoints and savepoints")]
+  A["7.0: Airflow orchestration"]
+  K -->|"All nine entities"| B
+  K -->|"All nine entities"| S
+  K -->|"Orders topic"| O
+  K -->|"Orders and payments topics"| P
+  K -->|"Products, orders and order_items topics"| R
+  K -->|"Customers, orders, payments, website, support, marketing topics"| C
+  B -->|"Rows with CDC metadata"| DB
+  S -->|"Normalized change records"| DS
+  O -->|"order_summary"| DG
+  P -->|"order_payment_summary"| DG
+  R -->|"product_performance"| DG
+  C -->|"customer_360_recovery"| DG
+  C -->|"Managed state and source offsets"| CP
+  CP -->|"Recovery snapshot"| C
+  A -->|"Submission and restore parameters for registered jobs"| C
+  C -->|"Job and checkpoint status"| A

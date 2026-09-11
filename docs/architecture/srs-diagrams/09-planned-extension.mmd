@@ -1,0 +1,29 @@
+flowchart LR
+  AN[("Existing Iceberg analytics and Gold")]
+  SQL["Existing Spark SQL / Thrift"]
+  BI["PLANNED: Superset dashboards"]
+  ML["PLANNED: ML training and inference"]
+  PRED[("PLANNED: Prediction outputs")]
+  API["PLANNED: FastAPI serving"]
+  RAG["PLANNED: GenAI analyst / retrieval and LLM"]
+  META[("PLANNED: Searchable semantic context / model documentation")]
+  U["Business user"]
+  TEL["Platform telemetry"]
+  PROM["PLANNED: Prometheus"]
+  GRAF["PLANNED: Grafana"]
+  AN -->|"Query data"| SQL
+  SQL -.->|"KPI result sets"| BI
+  BI -.->|"Dashboards"| U
+  AN -.->|"Training and scoring features"| ML
+  ML -.->|"Scores and predictions"| PRED
+  PRED -.->|"Prediction results"| API
+  U -.->|"Natural-language question"| API
+  API -.->|"Question and context"| RAG
+  META -.->|"Definitions and retrieval context"| RAG
+  RAG -.->|"Analytical SQL request"| SQL
+  SQL -.->|"Grounding result set"| RAG
+  RAG -.->|"Grounded answer"| API
+  API -.->|"Answer or prediction response"| U
+  TEL -.->|"Exported metrics"| PROM
+  PROM -.->|"Time series"| GRAF
+  GRAF -.->|"Operational dashboards"| U
