@@ -1,0 +1,1 @@
+select cast(customer_id as bigint) customer_id, trim(first_name) first_name, trim(last_name) last_name, lower(trim(email)) email, phone, country, state, city, signup_date, customer_segment, {{ cdc_timestamp('created_at') }} created_at, {{ cdc_timestamp('updated_at') }} updated_at, _ts_ms cdc_ts_ms from {{ source('silver','customers') }}

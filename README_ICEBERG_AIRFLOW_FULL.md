@@ -40,3 +40,60 @@
 
 The bootstrap is an initial load. Do not schedule it repeatedly yet.
 The next phase will split bootstrap from recurring incremental MERGE orchestration.
+
+
+
+# RetailPulse Incremental Iceberg Phase
+
+Recurring flow:
+
+Postgres -> Debezium -> Kafka -> Flink -> MinIO Bronze
+                                      |
+                                      v
+                              Airflow every 5 min
+                                      |
+                                      v
+                        Incremental CDC -> Iceberg Silver
+                                      |
+                                      v
+                              Iceberg Gold marts
+                                      |
+                                      v
+                                  Validation
+
+Pause the previous one-time bootstrap DAG after successful initial load:
+retailpulse_iceberg_pipeline
+
+New recurring DAG:
+retailpulse_iceberg_incremental
+
+New daily maintenance DAG:
+retailpulse_iceberg_maintenance
+
+Manual tests:
+
+docker exec retailpulse-spark-iceberg spark-submit \
+  /opt/retailpulse/lakehouse/iceberg/jobs/incremental_cdc_to_silver.py
+
+docker exec retailpulse-spark-iceberg spark-submit \
+  /opt/retailpulse/lakehouse/iceberg/jobs/build_gold_marts.py
+
+docker exec retailpulse-spark-iceberg spark-submit \
+  /opt/retailpulse/lakehouse/iceberg/jobs/validate_incremental_pipeline.py
+
+Restart Airflow:
+
+cd airflow
+
+docker compose --env-file .env -f docker-compose.airflow.yml \
+  restart airflow-dag-processor airflow-scheduler airflow-apiserver
+
+Check:
+
+docker compose --env-file .env -f docker-compose.airflow.yml \
+  exec airflow-scheduler airflow dags list-import-errors
+
+Trigger:
+
+docker compose --env-file .env -f docker-compose.airflow.yml \
+  exec airflow-scheduler airflow dags trigger retailpulse_iceberg_incremental

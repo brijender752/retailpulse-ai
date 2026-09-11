@@ -1,0 +1,1 @@
+select cast(product_id as bigint) product_id, product_name, category, subcategory, brand, cast(price as decimal(18,2)) price, cast(cost as decimal(18,2)) cost, supplier_id, cast(inventory_quantity as bigint) inventory_quantity, {{ cdc_timestamp('created_at') }} created_at, {{ cdc_timestamp('updated_at') }} updated_at from {{ source('silver','products') }}

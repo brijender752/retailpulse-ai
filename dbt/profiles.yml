@@ -1,0 +1,15 @@
+retailpulse:
+  target: dev
+  outputs:
+    dev:
+      type: spark
+      method: thrift
+      host: spark-thrift
+      port: 10000
+      user: dbt
+      schema: analytics
+      threads: 4
+      connect_retries: 10
+      connect_timeout: 60
+      # Surface unexpected connection errors instead of retrying them for 10 minutes.
+      retry_all: false

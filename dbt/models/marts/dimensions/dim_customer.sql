@@ -1,0 +1,1 @@
+select customer_id, first_name, last_name, concat_ws(' ',first_name,last_name) customer_name, email, phone, country, state, city, signup_date, customer_segment, created_at, updated_at from {{ ref('stg_customers') }}

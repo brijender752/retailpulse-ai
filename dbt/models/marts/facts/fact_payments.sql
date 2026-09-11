@@ -1,0 +1,1 @@
+select p.payment_id,p.order_id,p.customer_id,cast(date_format(cast(p.transaction_timestamp as date),'yyyyMMdd') as int) date_key,p.amount,p.payment_method,p.payment_status,p.transaction_timestamp,o.order_status,o.total_amount order_total_amount from {{ ref('stg_payments') }} p left join {{ ref('stg_orders') }} o on p.order_id=o.order_id

@@ -242,3 +242,11 @@ docker compose --env-file .env -f docker-compose.airflow.yml build
 docker compose --env-file .env -f docker-compose.airflow.yml up airflow-init
 
 docker compose --env-file .env -f docker-compose.airflow.yml up -d
+
+docker compose \
+  --env-file .env \
+  -f docker-compose.airflow.yml \
+  restart \
+  airflow-dag-processor \
+  airflow-scheduler \
+  airflow-apiserver

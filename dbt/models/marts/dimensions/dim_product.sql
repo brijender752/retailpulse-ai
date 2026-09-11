@@ -1,0 +1,1 @@
+select product_id, product_name, category, subcategory, brand, price, cost, price-cost unit_margin, case when price=0 then cast(0 as decimal(18,4)) else cast((price-cost)/price as decimal(18,4)) end margin_pct, supplier_id, inventory_quantity, created_at, updated_at from {{ ref('stg_products') }}

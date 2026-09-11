@@ -1,0 +1,49 @@
+version: 2
+models:
+  - name: dim_customer
+    columns:
+      - name: customer_id
+        data_tests: [not_null, unique]
+  - name: dim_product
+    columns:
+      - name: product_id
+        data_tests: [not_null, unique]
+  - name: dim_date
+    columns:
+      - name: date_key
+        data_tests: [not_null, unique]
+  - name: fact_orders
+    columns:
+      - name: order_id
+        data_tests: [not_null, unique]
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: "ref('dim_customer')", field: customer_id}
+      - name: date_key
+        data_tests:
+          - relationships:
+              arguments: {to: "ref('dim_date')", field: date_key}
+      - name: payment_match_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [MATCHED, MISMATCH, NO_PAYMENT]
+  - name: fact_payments
+    columns:
+      - name: payment_id
+        data_tests: [not_null, unique]
+  - name: fact_customer_activity
+    columns:
+      - name: customer_id
+        data_tests: [not_null, unique]
+  - name: mart_customer_value
+    columns:
+      - name: customer_id
+        data_tests: [not_null, unique]
+      - name: customer_value_segment
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [HIGH_VALUE, MEDIUM_VALUE, LOW_VALUE, PROSPECT]

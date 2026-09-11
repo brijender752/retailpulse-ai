@@ -1,0 +1,1 @@
+select cast(order_item_id as bigint) order_item_id, cast(order_id as bigint) order_id, cast(product_id as bigint) product_id, cast(quantity as bigint) quantity, cast(unit_price as decimal(18,2)) unit_price, cast(coalesce(discount,0) as decimal(18,2)) discount from {{ source('silver','order_items') }}

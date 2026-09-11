@@ -1,0 +1,1 @@
+select cast(payment_id as bigint) payment_id, cast(order_id as bigint) order_id, cast(customer_id as bigint) customer_id, cast(amount as decimal(18,2)) amount, payment_method, upper(payment_status) payment_status, {{ cdc_timestamp('transaction_timestamp') }} transaction_timestamp from {{ source('silver','payments') }}

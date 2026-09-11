@@ -1,0 +1,1 @@
+select event_id, cast(customer_id as bigint) customer_id, session_id, event_type, cast(product_id as bigint) product_id, {{ cdc_timestamp('event_timestamp') }} event_timestamp, device, browser, ip_address from {{ source('silver','website_events') }}

@@ -1,0 +1,1 @@
+select cast(ticket_id as bigint) ticket_id, cast(customer_id as bigint) customer_id, {{ cdc_timestamp('created_at') }} created_at, category, priority, message, status, resolution_time_minutes from {{ source('silver','support_tickets') }}

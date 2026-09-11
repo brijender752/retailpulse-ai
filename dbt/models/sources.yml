@@ -1,0 +1,46 @@
+version: 2
+sources:
+  - name: silver
+    # The Thrift server selects the retailpulse catalog via spark.sql.defaultCatalog.
+    # dbt-spark sources use schema only; setting database is unsupported.
+    schema: silver
+    description: Current-state Iceberg Silver tables produced from Debezium CDC.
+    tables:
+      - name: customers
+        columns:
+          - name: customer_id
+            data_tests: [not_null, unique]
+      - name: products
+        columns:
+          - name: product_id
+            data_tests: [not_null, unique]
+      - name: orders
+        columns:
+          - name: order_id
+            data_tests: [not_null, unique]
+          - name: customer_id
+            data_tests: [not_null]
+      - name: order_items
+        columns:
+          - name: order_item_id
+            data_tests: [not_null, unique]
+      - name: payments
+        columns:
+          - name: payment_id
+            data_tests: [not_null, unique]
+      - name: inventory
+        columns:
+          - name: inventory_id
+            data_tests: [not_null, unique]
+      - name: website_events
+        columns:
+          - name: event_id
+            data_tests: [not_null, unique]
+      - name: support_tickets
+        columns:
+          - name: ticket_id
+            data_tests: [not_null, unique]
+      - name: marketing_events
+        columns:
+          - name: marketing_event_id
+            data_tests: [not_null, unique]
