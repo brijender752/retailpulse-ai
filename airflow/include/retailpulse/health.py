@@ -80,7 +80,7 @@ def check_debezium() -> dict:
         if state != "RUNNING"
     ]
 
-    if bad_tasks:
+    if not task_states or bad_tasks:
         raise RuntimeError(
             f"Debezium tasks unhealthy: {task_states}"
         )

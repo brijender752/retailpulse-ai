@@ -323,8 +323,8 @@ from spark.configs.spark_session import create_spark_session
 # Paths
 # ============================================================
 
-BRONZE_BASE_PATH = "s3a://retailpulse/bronze"
-SILVER_BASE_PATH = "s3a://retailpulse/silver"
+BRONZE_BASE_PATH = "s3a://retailpulse/batch/bronze"
+SILVER_BASE_PATH = "s3a://retailpulse/batch/silver"
 
 
 # ============================================================

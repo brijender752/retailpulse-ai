@@ -1,5 +1,8 @@
 # RetailPulse AI — Airflow Control Plane
 
+> Current batch/streaming entry points and isolated MinIO paths are documented in
+> [Pipeline masters](README_PIPELINE_MASTERS.md). The phase-one paths below are historical.
+
 **Maintainer:** `bj_kush`
 **Scope:** local Docker development and orchestration
 

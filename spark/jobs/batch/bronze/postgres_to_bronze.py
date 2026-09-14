@@ -180,7 +180,7 @@ TABLES = [
     "marketing_events",
 ]
 
-BRONZE_BASE_PATH = "s3a://retailpulse/bronze"
+BRONZE_BASE_PATH = "s3a://retailpulse/batch/bronze"
 
 
 # ============================================================

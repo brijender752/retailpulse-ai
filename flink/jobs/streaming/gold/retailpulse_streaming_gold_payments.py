@@ -49,7 +49,7 @@ from pyflink.datastream.state import ValueStateDescriptor
 
 KAFKA_BOOTSTRAP = "kafka:9092"
 
-GOLD_BASE = "s3://retailpulse/gold_stream"
+GOLD_BASE = "s3://retailpulse/streaming/gold"
 
 GROUP_ID_ORDERS = (
     "retailpulse-streaming-gold-payments-orders"

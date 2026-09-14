@@ -463,13 +463,13 @@ services:
     command: taskmanager
 
     environment:
-      # Reserve direct memory for Kafka and cap managed memory for this
-      # lightweight local FileSink workload.
+      # Six concurrent CDC jobs share this heap, including Kafka fetch buffers.
+      # A 512 MB task heap exhausts during the initial source replay.
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
         taskmanager.numberOfTaskSlots: 10
-        taskmanager.memory.process.size: 2048m
-        taskmanager.memory.task.heap.size: 512m
+        taskmanager.memory.process.size: 4096m
+        taskmanager.memory.task.heap.size: 2048m
         taskmanager.memory.task.off-heap.size: 512m
         taskmanager.memory.framework.off-heap.size: 128m
         taskmanager.memory.network.min: 128m
@@ -595,7 +595,32 @@ services:
       DBT_PROFILES_DIR: /opt/retailpulse/dbt
     networks: [retailpulse]
     depends_on: [spark-thrift]
+
     
+  quality:
+    build:
+      context: .
+      dockerfile: quality/Dockerfile
+    container_name: retailpulse-quality
+    hostname: quality
+    user: root
+    command: ["bash","-lc","tail -f /dev/null"]
+    volumes:
+      - ./:/opt/retailpulse
+      - spark-iceberg-ivy:/root/.ivy2
+    environment:
+      ICEBERG_VERSION: "1.11.0"
+      HADOOP_AWS_PACKAGE: "org.apache.hadoop:hadoop-aws:3.4.1"
+      MINIO_S3A_ENDPOINT: "http://minio:9000"
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_SECRET_KEY: "minioadmin"
+      ICEBERG_WAREHOUSE: "s3a://retailpulse/warehouse"
+    networks:
+      - retailpulse
+    depends_on:
+      - minio
+      - spark-thrift
+
 
 networks:
   retailpulse:

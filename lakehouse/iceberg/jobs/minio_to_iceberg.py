@@ -13,7 +13,7 @@ DATASETS = {
 
     "customers_bronze": {
         "source":
-        "s3a://retailpulse/bronze/customers/",
+        "s3a://retailpulse/streaming/bronze/customers/",
 
         "target":
         "retailpulse.bronze.customers",
@@ -21,7 +21,7 @@ DATASETS = {
 
     "products_bronze": {
         "source":
-        "s3a://retailpulse/bronze/products/",
+        "s3a://retailpulse/streaming/bronze/products/",
 
         "target":
         "retailpulse.bronze.products",
@@ -29,7 +29,7 @@ DATASETS = {
 
     "orders_bronze": {
         "source":
-        "s3a://retailpulse/bronze/orders/",
+        "s3a://retailpulse/streaming/bronze/orders/",
 
         "target":
         "retailpulse.bronze.orders",
@@ -37,7 +37,7 @@ DATASETS = {
 
     "order_items_bronze": {
         "source":
-        "s3a://retailpulse/bronze/order_items/",
+        "s3a://retailpulse/streaming/bronze/order_items/",
 
         "target":
         "retailpulse.bronze.order_items",
@@ -45,7 +45,7 @@ DATASETS = {
 
     "payments_bronze": {
         "source":
-        "s3a://retailpulse/bronze/payments/",
+        "s3a://retailpulse/streaming/bronze/payments/",
 
         "target":
         "retailpulse.bronze.payments",
@@ -53,7 +53,7 @@ DATASETS = {
 
     "inventory_bronze": {
         "source":
-        "s3a://retailpulse/bronze/inventory/",
+        "s3a://retailpulse/streaming/bronze/inventory/",
 
         "target":
         "retailpulse.bronze.inventory",
@@ -61,7 +61,7 @@ DATASETS = {
 
     "website_events_bronze": {
         "source":
-        "s3a://retailpulse/bronze/website_events/",
+        "s3a://retailpulse/streaming/bronze/website_events/",
 
         "target":
         "retailpulse.bronze.website_events",
@@ -69,7 +69,7 @@ DATASETS = {
 
     "support_tickets_bronze": {
         "source":
-        "s3a://retailpulse/bronze/support_tickets/",
+        "s3a://retailpulse/streaming/bronze/support_tickets/",
 
         "target":
         "retailpulse.bronze.support_tickets",
@@ -77,7 +77,7 @@ DATASETS = {
 
     "marketing_events_bronze": {
         "source":
-        "s3a://retailpulse/bronze/marketing_events/",
+        "s3a://retailpulse/streaming/bronze/marketing_events/",
 
         "target":
         "retailpulse.bronze.marketing_events",
@@ -91,7 +91,7 @@ DATASETS = {
         "source":
         (
             "s3a://retailpulse/"
-            "gold_stream/"
+            "streaming/gold/"
             "customer_360_recovery/"
         ),
 
@@ -103,7 +103,7 @@ DATASETS = {
         "source":
         (
             "s3a://retailpulse/"
-            "gold_stream/"
+            "streaming/gold/"
             "order_summary/"
         ),
 
@@ -115,7 +115,7 @@ DATASETS = {
         "source":
         (
             "s3a://retailpulse/"
-            "gold_stream/"
+            "streaming/gold/"
             "order_payment_summary/"
         ),
 
@@ -127,7 +127,7 @@ DATASETS = {
         "source":
         (
             "s3a://retailpulse/"
-            "gold_stream/"
+            "streaming/gold/"
             "product_performance/"
         ),
 

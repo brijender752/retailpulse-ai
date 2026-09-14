@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from pyspark.sql import SparkSession
 
 from config.settings import (
@@ -10,12 +12,12 @@ from config.settings import (
 # Hadoop AWS dependency.
 #
 # IMPORTANT:
-# We are using Hadoop AWS 3.5.0.
+# Default matches Hadoop 3.4.1 in the Spark 4.0.1 image.
 # Dependencies are resolved through Ivy2 using:
 #
-# org.apache.hadoop:hadoop-aws:3.5.0
+# Override HADOOP_AWS_PACKAGE for a different native Spark installation.
 #
-HADOOP_AWS_PACKAGE = "org.apache.hadoop:hadoop-aws:3.5.0"
+HADOOP_AWS_PACKAGE = os.getenv("HADOOP_AWS_PACKAGE", "org.apache.hadoop:hadoop-aws:3.4.1")
 
 
 def create_spark_session(app_name: str) -> SparkSession:
@@ -37,7 +39,7 @@ def create_spark_session(app_name: str) -> SparkSession:
         )
         .config(
             "spark.jars",
-            "spark/jars/postgresql-42.7.12.jar",
+            str(Path(__file__).resolve().parents[1] / "jars" / "postgresql-42.7.12.jar"),
         )
         .config(
             "spark.hadoop.fs.s3a.endpoint",

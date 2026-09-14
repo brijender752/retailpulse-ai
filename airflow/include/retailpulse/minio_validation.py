@@ -3,11 +3,11 @@ from retailpulse.health import get_minio_client
 
 
 REQUIRED_PREFIXES = {
-    "bronze": "bronze/",
-    "silver_stream": "silver_stream/",
-    "gold_stream": "gold_stream/",
+    "bronze": "streaming/bronze/",
+    "silver_stream": "streaming/silver/",
+    "gold_stream": "streaming/gold/",
     "customer360_recovery": (
-        "gold_stream/customer_360_recovery/"
+        "streaming/gold/customer_360_recovery/"
     ),
     "customer360_checkpoints": (
         "flink-checkpoints/customer360-recovery/"

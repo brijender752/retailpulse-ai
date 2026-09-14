@@ -1,3 +1,6 @@
 docker==7.1.0
+apache-airflow-providers-standard==1.13.0
 minio==7.2.18
 psycopg2-binary==2.9.10
+Faker
+python-dotenv==1.1.1

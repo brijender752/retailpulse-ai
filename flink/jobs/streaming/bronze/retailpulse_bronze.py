@@ -25,7 +25,7 @@ from pyflink.table import DataTypes
 
 KAFKA_BOOTSTRAP = "kafka:9092"
 
-MINIO_BASE = "s3://retailpulse/bronze"
+MINIO_BASE = "s3://retailpulse/streaming/bronze"
 
 
 KAFKA_TOPICS = {

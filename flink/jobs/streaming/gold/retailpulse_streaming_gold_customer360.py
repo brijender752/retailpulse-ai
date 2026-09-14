@@ -49,7 +49,7 @@ from pyflink.table import StreamTableEnvironment
 
 KAFKA_BOOTSTRAP = "kafka:9092"
 
-GOLD_BASE = "s3://retailpulse/gold_stream"
+GOLD_BASE = "s3://retailpulse/streaming/gold"
 
 GROUP_ID = "retailpulse-streaming-gold-customer360"
 

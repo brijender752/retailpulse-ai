@@ -2,6 +2,9 @@ FROM apache/spark:4.0.1
 
 USER root
 
+RUN python3 -m pip install --no-cache-dir python-dotenv==1.1.1 \
+    && python3 -c "from dotenv import load_dotenv; print('python-dotenv import verified')"
+
 ENV SPARK_HOME=/opt/spark \
     PYSPARK_PYTHON=python3 \
     PYSPARK_DRIVER_PYTHON=python3

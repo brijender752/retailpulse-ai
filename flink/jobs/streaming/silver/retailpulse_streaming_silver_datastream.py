@@ -24,7 +24,7 @@ from pyflink.formats.parquet import ParquetBulkWriters
 
 KAFKA_BOOTSTRAP = "kafka:9092"
 
-SILVER_BASE = "s3://retailpulse/silver_stream"
+SILVER_BASE = "s3://retailpulse/streaming/silver"
 
 TABLES = {
     "customers": "retailpulse.ecommerce.customers",

@@ -98,7 +98,7 @@ JOB_VERSION = "v1"
 
 KAFKA_BOOTSTRAP = "kafka:9092"
 
-GOLD_BASE = "s3://retailpulse/gold_stream"
+GOLD_BASE = "s3://retailpulse/streaming/gold"
 GOLD_DATASET = "customer_360_recovery"
 
 GROUP_ID = "retailpulse-streaming-gold-customer360-recovery-v1"

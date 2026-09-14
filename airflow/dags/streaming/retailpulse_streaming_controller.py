@@ -36,7 +36,7 @@ from retailpulse.minio_validation import (
 
 @dag(
     dag_id="retailpulse_streaming_controller",
-    schedule="*/5 * * * *",
+    schedule=None,  # Scheduled by retailpulse_streaming_master.
     start_date=pendulum.datetime(
         2026,
         9,

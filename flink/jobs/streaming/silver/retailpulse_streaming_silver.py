@@ -50,7 +50,7 @@ from pyflink.common import Row
 
 KAFKA_BOOTSTRAP = "kafka:9092"
 
-SILVER_BASE = "s3://retailpulse/silver_stream"
+SILVER_BASE = "s3://retailpulse/streaming/silver"
 
 GROUP_PREFIX = "retailpulse-streaming-silver"
 

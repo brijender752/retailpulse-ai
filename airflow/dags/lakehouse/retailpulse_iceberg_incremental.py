@@ -12,7 +12,7 @@ from retailpulse.iceberg_control import run_spark_job
 
 @dag(
     dag_id="retailpulse_iceberg_incremental",
-    schedule="*/5 * * * *",
+    schedule=None,  # Manual; end-to-end streaming owns the ordered CDC/dbt run.
     start_date=pendulum.datetime(2026, 9, 10, tz="UTC"),
     catchup=False,
     max_active_runs=1,

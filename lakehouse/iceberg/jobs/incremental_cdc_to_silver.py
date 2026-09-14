@@ -104,7 +104,7 @@ def ensure_silver_table(spark, entity, source_df):
     initial.writeTo(target).using("iceberg").create()
 
 def process_entity(spark, entity):
-    source_path = f"s3a://retailpulse/bronze/{entity.table}/"
+    source_path = f"s3a://retailpulse/streaming/bronze/{entity.table}/"
     target = f"{CATALOG}.silver.{entity.table}"
 
     watermark = get_watermark(spark, entity.table)

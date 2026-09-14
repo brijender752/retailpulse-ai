@@ -227,3 +227,86 @@ Flink name is `RetailPulse - Customer 360 Stateful Recovery`.
 For the Airflow-specific architecture and troubleshooting guide, see
 [`airflow/README_PHASE1.md`](airflow/README_PHASE1.md). For pipeline ownership,
 see [`docs/architecture/pipelines.md`](docs/architecture/pipelines.md).
+
+
+# RetailPulse Data Quality Phase
+
+To initialize streaming through dbt with one command from Git Bash:
+
+```bash
+bash scripts/start_streaming.sh
+```
+
+This starts the containers, installs the Airflow setup dependencies, pauses the
+separate streaming/Iceberg/dbt workflows, and triggers
+`retailpulse_streaming_end_to_end`. If another pipeline run is still active,
+the script stops before recreating services; let that run finish and retry.
+Follow the run at [Airflow](http://localhost:8090).
+
+The manual DAG creates missing PostgreSQL schemas/tables, seeds a small demo
+dataset only when all source tables are empty, ensures the MinIO bucket and
+Debezium connector, starts or reuses the six Flink jobs, waits for checkpoints
+and committed Bronze Parquet for all nine entities, initializes missing Iceberg
+Bronze tables, merges CDC into Iceberg Silver, validates Silver, and runs dbt
+debug, build (models and tests), and docs generation. Existing Bronze Iceberg
+tables are retained; ongoing Silver updates read streaming files directly.
+Flink remains running after the DAG succeeds.
+
+The six Flink jobs share a TaskManager configured with a 4 GB process budget
+and 2 GB task heap. The previous 512 MB heap ran out of memory while replaying
+the existing CDC data. The startup script applies this configuration.
+
+For subsequent runs, trigger **retailpulse_streaming_end_to_end** in Airflow.
+Keep the separate pipeline DAGs paused while it runs. The standalone incremental
+Iceberg DAG is now manual to avoid independent five-minute writes overlapping
+this workflow. A fresh start here means
+initializing missing resources, not deleting Kafka offsets, Flink state, or data.
+If Kafka history has expired and a previously snapshotted connector has no new
+events, another source snapshot/replay is needed; the file sensor will not
+pretend an empty source is ready.
+
+1. The `quality` service is already included in `docker-compose.yml`.
+2. Build/start:
+   docker compose build quality
+   docker compose up -d --no-deps --force-recreate quality
+3. Check GX:
+   docker exec retailpulse-quality python3 -c "import great_expectations as gx; print(gx.__version__)"
+4. Run freshness:
+   docker exec retailpulse-quality spark-submit /opt/retailpulse/quality/check_freshness.py
+5. Run GX:
+   docker exec retailpulse-quality spark-submit /opt/retailpulse/quality/validate_analytics.py
+6. Restart Airflow and trigger `retailpulse_data_quality`.
+
+Results are written to:
+- quality/results/*.json
+- retailpulse.control.data_quality_results
+
+Note: if you are not generating CDC continuously, the 30-minute freshness check can fail.
+Increase MAX_AGE_MINUTES during static development.
+
+If freshness fails with `ClassNotFoundException: IcebergSparkSessionExtensions`
+or `Cannot find catalog plugin class`, rebuild and recreate `quality` using step 2
+(with the rest of the stack running). The quality image uses Spark 4.0.1 to match
+the shared Iceberg runtime and loads Iceberg and Hadoop AWS dependencies through
+`spark-defaults.conf` at startup. Setting `spark.jars.packages` only inside the
+Python session builder is too late to resolve them when launched by `spark-submit`.
+
+If freshness reports `TABLE_OR_VIEW_NOT_FOUND` for `retailpulse.silver.customers`,
+the Iceberg Silver tables are not visible in the configured warehouse. Both
+`quality` and `spark-iceberg` must use the same `ICEBERG_WAREHOUSE` and
+`MINIO_S3A_ENDPOINT` (the Compose defaults already match).
+For an uninitialized lakehouse, run the `retailpulse_iceberg_pipeline` Airflow DAG
+after the streaming Bronze source files are available. Its bootstrap step
+replaces Bronze Iceberg tables from the source files, so use it for initialization.
+If Bronze Iceberg tables already exist and only Silver is missing, run:
+
+```bash
+docker exec retailpulse-spark-iceberg spark-submit /opt/retailpulse/lakehouse/iceberg/jobs/build_silver_current_state.py
+docker exec retailpulse-spark-iceberg spark-submit /opt/retailpulse/lakehouse/iceberg/jobs/validate_silver.py
+docker exec retailpulse-quality spark-submit /opt/retailpulse/quality/check_freshness.py
+```
+
+Raw Parquet files in MinIO do not by themselves create these Iceberg catalog
+tables. The freshness check reports missing tables as failures; it does not
+create them. Quality Python changes are bind-mounted, so no image rebuild is
+needed for the improved diagnostics.
