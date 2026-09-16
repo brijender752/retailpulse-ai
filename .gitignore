@@ -12,6 +12,7 @@ env/
 
 # Environment
 .env
+superset/.env
 
 # Data
 data/raw/*

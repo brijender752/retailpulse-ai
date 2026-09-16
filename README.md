@@ -4,6 +4,62 @@
 
 An end-to-end real-time data engineering and GenAI platform for e-commerce analytics.
 
+## Local service URLs
+
+Start the stack from the repository root with `docker compose up -d --build`.
+These addresses use the host ports in `docker-compose.yml`.
+
+| Service | Local URL | Purpose |
+| --- | --- | --- |
+| Airflow | [localhost:8090](http://localhost:8090) | DAGs, runs, task logs, and scheduling |
+| Superset | [localhost:8088](http://localhost:8088) | Datasets, charts, SQL Lab, and dashboards |
+| Kafka UI | [localhost:8080](http://localhost:8080) | Kafka topics, messages, and consumer groups |
+| Flink | [localhost:8081](http://localhost:8081) | Streaming jobs, checkpoints, and task managers |
+| Debezium / Kafka Connect | [localhost:8083](http://localhost:8083) | Connector REST API |
+| Debezium connectors | [localhost:8083/connectors](http://localhost:8083/connectors) | Registered CDC connectors |
+| MinIO console | [localhost:9001](http://localhost:9001) | Browse buckets and lakehouse files |
+| MinIO S3 API | [localhost:9000](http://localhost:9000) | S3-compatible endpoint for storage clients |
+
+### Health and status endpoints
+
+| Service | Endpoint |
+| --- | --- |
+| Superset | [Health](http://localhost:8088/health) |
+| Airflow | [Component health](http://localhost:8090/api/v2/monitor/health) |
+| MinIO | [Live health](http://localhost:9000/minio/health/live) |
+| Flink | [Cluster overview](http://localhost:8081/overview) |
+| Debezium PostgreSQL connector | [Connector status](http://localhost:8083/connectors/retailpulse-postgres-connector/status) |
+
+### Superset dashboards
+
+These links refer to the dashboards created in the current local Superset database.
+IDs can change if dashboards are recreated or imported into another installation.
+
+| Dashboard | Local link |
+| --- | --- |
+| Executive Overview | [Open dashboard](http://localhost:8088/superset/dashboard/3/) |
+| Sales & Revenue | [Open dashboard](http://localhost:8088/superset/dashboard/4/) |
+| Customer 360 | [Open dashboard](http://localhost:8088/superset/dashboard/5/) |
+| Product Performance | [Open dashboard](http://localhost:8088/superset/dashboard/6/) |
+| Payment Reconciliation | [Open dashboard](http://localhost:8088/superset/dashboard/7/) |
+| Marketing & Support | [Open dashboard](http://localhost:8088/superset/dashboard/8/) |
+
+### Database and messaging connections
+
+These are client connection addresses, not browser pages.
+
+| Service | Host address | Usage |
+| --- | --- | --- |
+| PostgreSQL | `localhost:5432` | SQL clients; credentials and database name are in the root `.env` |
+| Kafka host listener | `localhost:9094` | Bootstrap address for applications running on your computer |
+| Kafka internal listener | `localhost:9092` | Published port, but advertises `kafka:9092`; use port 9094 for host clients |
+| Spark Thrift | `localhost:10000` | Hive-compatible SQL clients; SQLAlchemy URI: `hive://superset@localhost:10000/analytics` |
+
+Inside Docker containers, use service names instead of `localhost`, for example
+`http://superset:8088`, `http://minio:9000`, `kafka:9092`, and
+`hive://superset@spark-thrift:10000/analytics`. Airflow listens on port 8080
+inside its container and is exposed on host port 8090.
+
 ## Architecture
 
 PostgreSQL

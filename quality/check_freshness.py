@@ -4,7 +4,7 @@ from pyspark.sql import functions as F
 sys.path.insert(0, "/opt/retailpulse/lakehouse/iceberg/jobs")
 from iceberg_session import create_iceberg_spark_session
 
-MAX_AGE_MINUTES = 30
+MAX_AGE_MINUTES = 1440
 TABLES = {
     "retailpulse.silver.customers":"_ts_ms",
     "retailpulse.silver.orders":"_ts_ms",

@@ -1,3 +1,68 @@
+x-airflow-common: &airflow-common
+  build:
+    context: ./airflow
+    dockerfile: Dockerfile
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    # Airflow 3 task processes use this service to report task state. Do not
+    # use localhost: from a scheduler/task container it is not the API server.
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-apiserver:8080/execution/
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: UTC
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+    AIRFLOW__API__SECRET_KEY: retailpulse-local-dev-secret
+    # These must be identical in the scheduler, task runner, and API server.
+    # Otherwise Airflow 3 task runners cannot authenticate to /execution/ and
+    # fail immediately after the "Pre Execute" log entry.
+    AIRFLOW__API_AUTH__JWT_SECRET: retailpulse-local-dev-execution-jwt-secret
+    AIRFLOW__API_AUTH__JWT_ISSUER: retailpulse-airflow
+    AIRFLOW__CORE__FERNET_KEY: ""
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.api_fastapi.auth.managers.simple.simple_auth_manager.SimpleAuthManager
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"
+
+    RETAILPULSE_POSTGRES_HOST: ${RETAILPULSE_POSTGRES_HOST:-postgres}
+    RETAILPULSE_POSTGRES_PORT: ${RETAILPULSE_POSTGRES_PORT:-5432}
+    RETAILPULSE_POSTGRES_DB: ${RETAILPULSE_POSTGRES_DB:-retailpulse}
+    RETAILPULSE_POSTGRES_USER: ${RETAILPULSE_POSTGRES_USER:-retailpulse}
+    RETAILPULSE_POSTGRES_PASSWORD: ${RETAILPULSE_POSTGRES_PASSWORD:-retailpulse}
+
+    RETAILPULSE_DEBEZIUM_URL: ${RETAILPULSE_DEBEZIUM_URL:-http://debezium:8083}
+    RETAILPULSE_DEBEZIUM_CONNECTOR: ${RETAILPULSE_DEBEZIUM_CONNECTOR:-retailpulse-postgres-connector}
+
+    RETAILPULSE_KAFKA_HOST: ${RETAILPULSE_KAFKA_HOST:-kafka}
+    RETAILPULSE_KAFKA_PORT: ${RETAILPULSE_KAFKA_PORT:-9092}
+
+    RETAILPULSE_FLINK_URL: ${RETAILPULSE_FLINK_URL:-http://flink-jobmanager:8081}
+    RETAILPULSE_FLINK_CONTAINER: ${RETAILPULSE_FLINK_CONTAINER:-retailpulse-flink-jobmanager}
+
+    RETAILPULSE_MINIO_ENDPOINT: ${RETAILPULSE_MINIO_ENDPOINT:-minio:9000}
+    RETAILPULSE_MINIO_ACCESS_KEY: ${RETAILPULSE_MINIO_ACCESS_KEY:-minioadmin}
+    RETAILPULSE_MINIO_SECRET_KEY: ${RETAILPULSE_MINIO_SECRET_KEY:-minioadmin}
+    RETAILPULSE_MINIO_SECURE: ${RETAILPULSE_MINIO_SECURE:-false}
+    RETAILPULSE_MINIO_BUCKET: ${RETAILPULSE_MINIO_BUCKET:-retailpulse}
+
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/include:/opt/airflow/include
+    - ./:/opt/retailpulse:ro
+    - ./airflow/logs:/opt/airflow/logs
+
+    # Local-development control plane:
+    # lets Airflow submit/check PyFlink jobs inside the existing JobManager.
+    - /var/run/docker.sock:/var/run/docker.sock
+
+  user: "${AIRFLOW_UID:-50000}:0"
+  networks:
+    - airflow-internal
+    - retailpulse
+
+  depends_on:
+    airflow-db:
+      condition: service_healthy
+
+
 # services:
 
 #   postgres:
@@ -622,9 +687,163 @@ services:
       - spark-thrift
 
 
+  superset-db:
+    image: postgres:16
+    container_name: retailpulse-superset-db
+    hostname: superset-db
+    environment:
+      POSTGRES_USER: ${SUPERSET_DB_USER:-superset}
+      POSTGRES_PASSWORD: ${SUPERSET_DB_PASSWORD:-superset}
+      POSTGRES_DB: ${SUPERSET_DB_NAME:-superset}
+    volumes:
+      - superset-db-data:/var/lib/postgresql/data
+    networks: [retailpulse]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SUPERSET_DB_USER:-superset} -d ${SUPERSET_DB_NAME:-superset}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  superset-redis:
+    image: redis:7-alpine
+    container_name: retailpulse-superset-redis
+    hostname: superset-redis
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - superset-redis-data:/data
+    networks: [retailpulse]
+
+  superset-init:
+    build:
+      context: .
+      dockerfile: superset/Dockerfile
+    container_name: retailpulse-superset-init
+    env_file:
+      - ./.env
+    environment:
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      SUPERSET_DB_HOST: superset-db
+      SUPERSET_DB_PORT: "5432"
+    volumes:
+      - ./superset/superset_config.py:/app/pythonpath/superset_config.py:ro
+      - ./superset/init_superset.sh:/app/init_superset.sh:ro
+    command: ["bash", "/app/init_superset.sh"]
+    depends_on:
+      superset-db:
+        condition: service_healthy
+      superset-redis:
+        condition: service_started
+    networks: [retailpulse]
+
+  superset:
+    build:
+      context: .
+      dockerfile: superset/Dockerfile
+    container_name: retailpulse-superset
+    hostname: superset
+    env_file:
+      - ./.env
+    environment:
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      SUPERSET_DB_HOST: superset-db
+      SUPERSET_DB_PORT: "5432"
+    volumes:
+      - ./superset/superset_config.py:/app/pythonpath/superset_config.py:ro
+    ports:
+      - "8088:8088"
+    command:
+      - gunicorn
+      - --bind
+      - 0.0.0.0:8088
+      - --workers
+      - "2"
+      - --worker-class
+      - gevent
+      - --timeout
+      - "120"
+      - "superset.app:create_app()"
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    networks: [retailpulse]
+
+  airflow-db:
+    container_name: airflow-airflow-db-1
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - airflow-internal
+
+  airflow-init:
+    container_name: airflow-airflow-init-1
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+    restart: "no"
+  airflow-apiserver:
+    <<: *airflow-common
+    container_name: airflow-airflow-apiserver-1
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    command: api-server
+    ports:
+      - "8090:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-airflow-scheduler-1
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    command: scheduler
+    restart: unless-stopped
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    container_name: airflow-airflow-dag-processor-1
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    command: dag-processor
+    restart: unless-stopped
+
+  airflow-triggerer:
+    <<: *airflow-common
+    container_name: airflow-airflow-triggerer-1
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    command: triggerer
+    restart: unless-stopped
+
+
 networks:
+  airflow-internal:
+    driver: bridge
   retailpulse:
     driver: bridge
+    name: retailpulse-ai_retailpulse
     
     
 # ============================================================
@@ -639,3 +858,8 @@ volumes:
   kafka_data:
   flink_checkpoints:
   spark-iceberg-ivy:
+  superset-db-data:
+  superset-redis-data:
+
+  airflow-db-data:
+    name: airflow_airflow-db-data

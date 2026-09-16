@@ -1,10 +1,11 @@
-"""One manual run from source initialization through tested dbt analytics."""
+"""Run incremental CDC, dbt analytics, quality checks, and Superset validation."""
 import sys
 from datetime import timedelta
 
 import pendulum
 from airflow.sdk import dag, task
 from airflow.providers.standard.sensors.python import PythonSensor
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 
 sys.path.insert(0, "/opt/airflow/include")
 from retailpulse.streaming_setup import initialize_source, ensure_bucket, ensure_connector, bronze_files_ready
@@ -13,12 +14,13 @@ from retailpulse.flink_control import ensure_flink_job, validate_job_checkpoint
 from retailpulse.jobs import FLINK_JOBS
 from retailpulse.iceberg_control import run_spark_job
 from retailpulse.dbt_control import run_dbt_command
+from retailpulse.quality_control import run_quality_job
 
 
 @dag(dag_id="retailpulse_streaming_end_to_end", schedule=None,
      start_date=pendulum.datetime(2026, 9, 14, tz="UTC"), catchup=False,
      max_active_runs=1, dagrun_timeout=timedelta(hours=3),
-     tags=["retailpulse", "streaming", "dbt", "manual"])
+     tags=["retailpulse", "streaming", "incremental", "dbt", "quality", "manual"])
 def retailpulse_streaming_end_to_end():
     source = task(initialize_source)()
     bucket = task(ensure_bucket)()
@@ -78,7 +80,60 @@ def retailpulse_streaming_end_to_end():
     debug = dbt.override(task_id="dbt_debug")("dbt debug --target dev")
     build = dbt.override(task_id="dbt_build")("dbt build --target dev")
     docs = dbt.override(task_id="dbt_docs")("dbt docs generate --target dev")
-    namespaces >> debug >> build >> docs
+
+    @task(execution_timeout=timedelta(minutes=45))
+    def freshness():
+        return run_quality_job("quality/check_freshness.py")
+
+    @task(execution_timeout=timedelta(minutes=45))
+    def gx_validation():
+        return run_quality_job("quality/validate_analytics.py")
+
+    # dbt build includes the dbt tests; gate completion on the remaining quality checks.
+    namespaces >> debug >> build >> freshness() >> gx_validation() >> docs
+
+    @task(execution_timeout=timedelta(minutes=2))
+    def enable_downstream_schedule():
+        import os
+        import docker
+
+        # Use the scheduler container's environment, not the task subprocess's
+        # restricted Airflow database configuration.
+        client = docker.from_env()
+        try:
+            container = client.containers.get(os.getenv(
+                "RETAILPULSE_AIRFLOW_SCHEDULER_CONTAINER", "airflow-airflow-scheduler-1"
+            ))
+            result = container.exec_run(
+                ["airflow", "dags", "unpause", "retailpulse_streaming_downstream"],
+                stdout=True, stderr=True,
+            )
+            output = result.output.decode("utf-8", errors="replace")
+            if result.exit_code != 0:
+                raise RuntimeError(f"Unable to enable downstream schedule\n{output}")
+            return output
+        finally:
+            client.close()
+
+    run_downstream = TriggerDagRunOperator(
+        task_id="run_streaming_downstream",
+        trigger_dag_id="retailpulse_streaming_downstream",
+        trigger_run_id="streaming_end_to_end__{{ run_id }}",
+        skip_when_already_exists=True,
+        wait_for_completion=False,
+    )
+    publish_analytics = TriggerDagRunOperator(
+        task_id="run_analytics_publish",
+        trigger_dag_id="retailpulse_analytics_publish",
+        trigger_run_id="streaming_end_to_end__{{ run_id }}",
+        # Re-run this idempotent health check if the parent task is retried.
+        reset_dag_run=True,
+        wait_for_completion=True,
+        deferrable=True,
+        poke_interval=15,
+        execution_timeout=timedelta(minutes=15),
+    )
+    docs >> publish_analytics >> enable_downstream_schedule() >> run_downstream
 
 
 dag = retailpulse_streaming_end_to_end()

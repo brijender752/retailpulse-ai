@@ -1,6 +1,6 @@
 x-airflow-common: &airflow-common
   build:
-    context: .
+    context: ./airflow
     dockerfile: Dockerfile
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -44,10 +44,10 @@ x-airflow-common: &airflow-common
     RETAILPULSE_MINIO_BUCKET: ${RETAILPULSE_MINIO_BUCKET:-retailpulse}
 
   volumes:
-    - ./dags:/opt/airflow/dags
-    - ./include:/opt/airflow/include
-    - ../:/opt/retailpulse:ro
-    - ./logs:/opt/airflow/logs
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/include:/opt/airflow/include
+    - ./:/opt/retailpulse:ro
+    - ./airflow/logs:/opt/airflow/logs
 
     # Local-development control plane:
     # lets Airflow submit/check PyFlink jobs inside the existing JobManager.

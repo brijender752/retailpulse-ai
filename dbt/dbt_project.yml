@@ -14,9 +14,3 @@ models:
     marts:
       +materialized: table
       +file_format: iceberg
-      dimensions:
-        +schema: analytics
-      facts:
-        +schema: analytics
-      business:
-        +schema: analytics
