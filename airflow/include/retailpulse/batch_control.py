@@ -1,5 +1,6 @@
 """Run the bounded batch modules in the Spark container."""
 import docker
+from retailpulse.task_logging import log_execution
 
 from retailpulse.config import POSTGRES, MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY
 from retailpulse.iceberg_control import SPARK_CONTAINER
@@ -16,6 +17,7 @@ def run_batch_job(layer: str) -> str:
     if layer not in BATCH_MODULES:
         raise ValueError(f"Unknown batch layer: {layer}")
     environment = {
+        # Credentials stay in the execution environment, never in the log header.
         "PYTHONPATH": "/opt/retailpulse",
         "POSTGRES_HOST": POSTGRES["host"],
         "POSTGRES_PORT": str(POSTGRES["port"]),
@@ -27,6 +29,8 @@ def run_batch_job(layer: str) -> str:
         "MINIO_SECRET_KEY": MINIO_SECRET_KEY,
         "HADOOP_AWS_PACKAGE": "org.apache.hadoop:hadoop-aws:3.4.1",
     }
+    log_execution("/opt/retailpulse/spark/jobs/batch/run_batch.py", SPARK_CONTAINER)
+    log_execution(BATCH_MODULES[layer])
     client = docker.from_env()
     try:
         result = client.containers.get(SPARK_CONTAINER).exec_run(

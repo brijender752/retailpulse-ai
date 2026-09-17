@@ -9,7 +9,9 @@ sys.path.insert(0, "/opt/airflow/include")
 from airflow.sdk import dag, task
 from retailpulse.iceberg_control import run_spark_job
 
-@dag(
+from retailpulse.task_logging import log_task_start
+
+@dag(default_args={"on_execute_callback": log_task_start}, 
     dag_id="retailpulse_iceberg_maintenance",
     schedule="0 2 * * *",
     start_date=pendulum.datetime(2026, 9, 10, tz="UTC"),

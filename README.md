@@ -84,7 +84,6 @@ GenAI AI Analyst
 
 - `spark/jobs/batch/` — bounded Spark jobs, grouped into Bronze, Silver, and Gold.
 - `flink/jobs/streaming/` — continuous Flink jobs, grouped into Bronze, Silver, and Gold.
-- `flink/jobs/archive/` — historical experiments; do not submit these as active jobs.
 - `docs/architecture/pipelines.md` — pipeline ownership and run commands.
 - `airflow/README_PHASE1.md` — Airflow setup, DAGs, control-plane commands,
   and troubleshooting.

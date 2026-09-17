@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 import docker
+from retailpulse.task_logging import log_execution
 
 SPARK_CONTAINER = os.getenv(
     "RETAILPULSE_SPARK_ICEBERG_CONTAINER",
@@ -8,6 +9,7 @@ SPARK_CONTAINER = os.getenv(
 )
 
 def run_spark_job(relative_job_path: str) -> str:
+    log_execution(relative_job_path, SPARK_CONTAINER, f"spark-submit /opt/retailpulse/{relative_job_path}")
     client = docker.from_env()
     container = client.containers.get(SPARK_CONTAINER)
     cmd = f"/opt/spark/bin/spark-submit /opt/retailpulse/{relative_job_path}"

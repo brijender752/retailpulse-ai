@@ -11,7 +11,9 @@ from retailpulse.health import check_postgres, check_minio
 from retailpulse.minio_validation import validate_prefix
 
 
-@dag(
+from retailpulse.task_logging import log_task_start
+
+@dag(default_args={"on_execute_callback": log_task_start}, 
     dag_id="retailpulse_batch_master",
     schedule=None,
     start_date=pendulum.datetime(2026, 9, 11, tz="UTC"),

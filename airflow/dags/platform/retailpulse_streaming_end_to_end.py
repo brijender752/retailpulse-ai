@@ -17,7 +17,9 @@ from retailpulse.dbt_control import run_dbt_command
 from retailpulse.quality_control import run_quality_job
 
 
-@dag(dag_id="retailpulse_streaming_end_to_end", schedule=None,
+from retailpulse.task_logging import log_task_start
+
+@dag(default_args={"on_execute_callback": log_task_start}, dag_id="retailpulse_streaming_end_to_end", schedule=None,
      start_date=pendulum.datetime(2026, 9, 14, tz="UTC"), catchup=False,
      max_active_runs=1, dagrun_timeout=timedelta(hours=3),
      tags=["retailpulse", "streaming", "incremental", "dbt", "quality", "manual"])

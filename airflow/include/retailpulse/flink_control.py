@@ -6,6 +6,7 @@ from pathlib import PurePosixPath
 
 import docker
 import requests
+from retailpulse.task_logging import log_execution
 
 from retailpulse.config import (
     FLINK_URL,
@@ -154,6 +155,7 @@ def submit_flink_job(
             f"-py '{job_path}'"
         )
 
+    log_execution(job_path, FLINK_CONTAINER, command)
     output = _exec_in_jobmanager(
         command
     )
@@ -175,6 +177,7 @@ def submit_flink_job(
 
 
 def ensure_flink_job(job_config: dict) -> dict:
+    log_execution(job_config["path"], FLINK_CONTAINER)
     job_name = job_config["job_name"]
 
     current = find_job_by_name(

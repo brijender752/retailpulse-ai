@@ -1,0 +1,225 @@
+{
+  "run_id": "20260916T152146Z",
+  "checks": [
+    {
+      "table_name": "retailpulse.analytics.dim_customer",
+      "expectation": "customer_id:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_customer",
+      "expectation": "email:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_customer",
+      "expectation": "customer_id:unique",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_product",
+      "expectation": "product_id:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_product",
+      "expectation": "price:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_product",
+      "expectation": "product_id:unique",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_product",
+      "expectation": "price:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_product",
+      "expectation": "cost:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_product",
+      "expectation": "inventory_quantity:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_date",
+      "expectation": "date_key:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_date",
+      "expectation": "date_day:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_date",
+      "expectation": "date_key:unique",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.dim_date",
+      "expectation": "date_day:unique",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_orders",
+      "expectation": "order_id:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_orders",
+      "expectation": "customer_id:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_orders",
+      "expectation": "date_key:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_orders",
+      "expectation": "order_id:unique",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_orders",
+      "expectation": "total_amount:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_orders",
+      "expectation": "line_count:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_orders",
+      "expectation": "item_quantity:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_orders",
+      "expectation": "gross_item_amount:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_orders",
+      "expectation": "payment_match_status:accepted_values",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_payments",
+      "expectation": "payment_id:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_payments",
+      "expectation": "order_id:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_payments",
+      "expectation": "customer_id:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_payments",
+      "expectation": "payment_id:unique",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_payments",
+      "expectation": "amount:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_customer_activity",
+      "expectation": "customer_id:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_customer_activity",
+      "expectation": "customer_id:unique",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_customer_activity",
+      "expectation": "website_event_count:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_customer_activity",
+      "expectation": "session_count:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_customer_activity",
+      "expectation": "support_ticket_count:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_customer_activity",
+      "expectation": "open_support_ticket_count:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_customer_activity",
+      "expectation": "marketing_impressions:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_customer_activity",
+      "expectation": "marketing_clicks:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_customer_activity",
+      "expectation": "marketing_conversions:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.fact_customer_activity",
+      "expectation": "marketing_cost:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.mart_customer_value",
+      "expectation": "customer_id:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.mart_customer_value",
+      "expectation": "customer_value_segment:not_null",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.mart_customer_value",
+      "expectation": "customer_id:unique",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.mart_customer_value",
+      "expectation": "total_orders:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.mart_customer_value",
+      "expectation": "lifetime_order_value:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.mart_customer_value",
+      "expectation": "lifetime_payments:non_negative",
+      "success": true
+    },
+    {
+      "table_name": "retailpulse.analytics.mart_customer_value",
+      "expectation": "customer_value_segment:accepted_values",
+      "success": true
+    }
+  ]
+}

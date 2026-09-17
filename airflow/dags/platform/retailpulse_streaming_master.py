@@ -6,7 +6,11 @@ from airflow.sdk import dag
 from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 
 
-@dag(
+import sys
+sys.path.insert(0, "/opt/airflow/include")
+from retailpulse.task_logging import log_task_start
+
+@dag(default_args={"on_execute_callback": log_task_start}, 
     dag_id="retailpulse_streaming_master",
     schedule="*/5 * * * *",
     start_date=pendulum.datetime(2026, 9, 11, tz="UTC"),

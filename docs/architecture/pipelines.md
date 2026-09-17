@@ -33,5 +33,4 @@ docker exec retailpulse-flink-jobmanager sh -lc \
   'flink run -py /opt/flink/jobs/streaming/gold/retailpulse_streaming_gold_customer360_stateful.py'
 ```
 
-`flink/jobs/archive/` contains historical job variants and is not part of the
-active pipeline.
+Historical job variants are available in Git history.

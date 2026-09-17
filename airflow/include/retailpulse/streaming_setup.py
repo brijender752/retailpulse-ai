@@ -8,6 +8,7 @@ import sys
 import psycopg2
 from psycopg2 import sql
 import requests
+from retailpulse.task_logging import log_execution
 
 from retailpulse.config import POSTGRES, DEBEZIUM_URL, DEBEZIUM_CONNECTOR, MINIO_BUCKET
 from retailpulse.health import get_minio_client
@@ -26,6 +27,7 @@ def initialize_source():
         with connection:
             with connection.cursor() as cursor:
                 for filename in ("01_create_schemas.sql", "02_create_tables.sql"):
+                    log_execution(str(PROJECT / "sql" / filename))
                     cursor.execute((PROJECT / "sql" / filename).read_text())
                 counts = {}
                 for name in ENTITIES:
@@ -46,6 +48,7 @@ def initialize_source():
     from data_generator.main import main
     DATA_VOLUME.update(customers=100, products=50, orders=500,
                        events=2000, support_tickets=100, marketing_events=500)
+    log_execution("/opt/retailpulse/data_generator/main.py")
     main()
     return {"source": "seeded", "volumes": DATA_VOLUME}
 

@@ -20,7 +20,9 @@ from retailpulse.health import (
 )
 
 
-@dag(
+from retailpulse.task_logging import log_task_start
+
+@dag(default_args={"on_execute_callback": log_task_start}, 
     dag_id="retailpulse_platform_health",
     schedule="*/5 * * * *",
     start_date=pendulum.datetime(
