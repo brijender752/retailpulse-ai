@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1240" viewBox="0 0 1200 1240" role="img" aria-labelledby="title desc">
+  <title id="title">Churn training to champion model</title>
+  <desc id="desc">Churn training flows through three model experiments into MLflow Tracking, which stores parameters, metrics, model artifacts, feature metadata, and evaluation results. The best model is registered as RetailPulseChurnModel with the champion alias.</desc>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1">
+      <stop stop-color="#f5f9ff"/>
+      <stop offset="1" stop-color="#eef7f5"/>
+    </linearGradient>
+    <linearGradient id="accent" x2="1">
+      <stop stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#0d9488"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-30%" width="140%" height="170%">
+      <feDropShadow dx="0" dy="7" stdDeviation="12" flood-color="#183153" flood-opacity=".10"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto">
+      <path d="M1 1 L5 8 L9 1" fill="none" stroke="#4980a8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: Inter, 'Segoe UI', Arial, sans-serif; fill: #17324d; }
+      .heading { font-size: 34px; font-weight: 750; letter-spacing: -.5px; }
+      .node { font-size: 27px; font-weight: 700; }
+      .small { font-size: 21px; font-weight: 550; }
+      .pill { font-size: 23px; font-weight: 750; }
+      .flow { stroke: #4980a8; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="1240" rx="28" fill="url(#background)"/>
+  <text class="heading" x="600" y="68" text-anchor="middle">Churn model training and registration</text>
+  <rect x="395" y="100" width="410" height="80" rx="18" fill="#fff" stroke="#d9e6f2" filter="url(#shadow)"/>
+  <text class="node" x="600" y="150" text-anchor="middle">Churn training</text>
+  <path class="flow" d="M600 184 V211"/>
+
+  <rect x="395" y="230" width="410" height="80" rx="18" fill="#fff" stroke="#d9e6f2" filter="url(#shadow)"/>
+  <text class="node" x="600" y="280" text-anchor="middle">3 model experiments</text>
+  <path class="flow" d="M600 314 V341"/>
+
+  <rect x="235" y="360" width="730" height="394" rx="24" fill="#fff" stroke="#cbddec" filter="url(#shadow)"/>
+  <rect x="235" y="360" width="730" height="88" rx="24" fill="url(#accent)"/>
+  <path d="M235 424 H965 V448 H235 Z" fill="url(#accent)"/>
+  <text x="600" y="416" text-anchor="middle" style="font-size:30px;font-weight:750;fill:#fff">MLflow Tracking</text>
+  <circle cx="291" cy="491" r="6" fill="#0d9488"/><text class="small" x="318" y="499">Parameters</text>
+  <circle cx="291" cy="542" r="6" fill="#0d9488"/><text class="small" x="318" y="550">Metrics</text>
+  <circle cx="291" cy="593" r="6" fill="#0d9488"/><text class="small" x="318" y="601">Model artifacts</text>
+  <circle cx="291" cy="644" r="6" fill="#0d9488"/><text class="small" x="318" y="652">Feature metadata</text>
+  <circle cx="291" cy="695" r="6" fill="#0d9488"/><text class="small" x="318" y="703">Evaluation results</text>
+  <path class="flow" d="M600 758 V785"/>
+
+  <rect x="395" y="804" width="410" height="76" rx="18" fill="#fff" stroke="#d9e6f2" filter="url(#shadow)"/>
+  <text class="node" x="600" y="852" text-anchor="middle">Best model</text>
+  <path class="flow" d="M600 884 V911"/>
+
+  <rect x="395" y="930" width="410" height="76" rx="18" fill="#fff" stroke="#d9e6f2" filter="url(#shadow)"/>
+  <text class="node" x="600" y="978" text-anchor="middle">Model Registry</text>
+  <path class="flow" d="M600 1010 V1037"/>
+
+  <rect x="325" y="1056" width="550" height="76" rx="18" fill="#fff" stroke="#d9e6f2" filter="url(#shadow)"/>
+  <text class="node" x="600" y="1104" text-anchor="middle">RetailPulseChurnModel</text>
+  <path class="flow" d="M600 1136 V1151"/>
+  <rect x="460" y="1170" width="280" height="48" rx="24" fill="#d8f5ed" stroke="#8ad9c1"/>
+  <text class="pill" x="600" y="1201" text-anchor="middle" fill="#096b5d">Alias: champion</text>
+</svg>

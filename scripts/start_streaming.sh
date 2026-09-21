@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export MSYS_NO_PATHCONV=1
 
-af_compose() { docker compose --env-file airflow/.env -f airflow/docker-compose.airflow.yml "$@"; }
+af_compose() { docker compose --profile airflow "$@"; }
 af() { af_compose exec -T airflow-scheduler airflow "$@"; }
 if af_compose ps --services --status running | grep -qx airflow-scheduler; then
     # Check before pausing: paused DAGs cannot schedule their remaining tasks.
@@ -14,9 +14,7 @@ if af_compose ps --services --status running | grep -qx airflow-scheduler; then
     done
     af_compose exec -T airflow-scheduler python - < scripts/check_streaming_idle.py
 fi
-docker compose up -d --build
-af_compose build
-af_compose run --rm airflow-init
+docker compose --profile ingestion --profile etl --profile airflow --profile analytics up -d --build
 af_compose up -d --wait --wait-timeout 180 airflow-apiserver airflow-scheduler airflow-dag-processor airflow-triggerer
 
 echo "Waiting for Airflow to discover the end-to-end DAG..."

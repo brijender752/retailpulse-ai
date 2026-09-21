@@ -4,6 +4,9 @@ x-airflow-common: &airflow-common
     dockerfile: Dockerfile
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__PARALLELISM: ${AIRFLOW_PARALLELISM:-2}
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: ${AIRFLOW_MAX_ACTIVE_TASKS_PER_DAG:-2}
+    AIRFLOW__DAG_PROCESSOR__PARSING_PROCESSES: ${AIRFLOW_PARSING_PROCESSES:-1}
     # Airflow 3 task processes use this service to report task state. Do not
     # use localhost: from a scheduler/task container it is not the API server.
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-apiserver:8080/execution/
@@ -71,6 +74,7 @@ services:
   # ==========================================================
 
   postgres:
+    profiles: [ingestion, etl, tools]
     image: postgres:16
     container_name: retailpulse-postgres
     restart: unless-stopped
@@ -114,6 +118,7 @@ services:
   # ==========================================================
 
   minio:
+    profiles: [ingestion, etl, legacy-spark, mlflow]
     image: minio/minio:latest
     container_name: retailpulse-minio
     restart: unless-stopped
@@ -144,6 +149,7 @@ services:
   # ==========================================================
 
   kafka:
+    profiles: [ingestion, etl, tools]
     image: apache/kafka:4.0.1
     container_name: retailpulse-kafka
 
@@ -195,6 +201,7 @@ services:
   # creates a topic after it produces a record, while Flink subscribes to all
   # configured tables immediately.
   kafka-topic-init:
+    profiles: [ingestion, etl, tools]
     image: apache/kafka:4.0.1
     container_name: retailpulse-kafka-topic-init
     restart: "no"
@@ -222,6 +229,7 @@ services:
 
 
   kafka-ui:
+    profiles: [tools]
     image: kafbat/kafka-ui:latest
     container_name: retailpulse-kafka-ui
 
@@ -243,6 +251,7 @@ services:
   # ==========================================================
 
   debezium:
+    profiles: [ingestion]
     image: quay.io/debezium/connect:3.3.2.Final
     container_name: retailpulse-debezium
     restart: unless-stopped
@@ -315,6 +324,7 @@ services:
   # Registers the PostgreSQL CDC connector after Kafka Connect is ready.
   # Kafka Connect does not automatically load JSON files from the project.
   debezium-init:
+    profiles: [ingestion]
     image: curlimages/curl:8.12.1
     container_name: retailpulse-debezium-init
     restart: "no"
@@ -358,6 +368,7 @@ services:
   # unprivileged `flink` user, so prepare the shared checkpoint directory
   # before either Flink service starts.
   flink-checkpoint-init:
+    profiles: [etl]
     image: alpine:3.21
     container_name: retailpulse-flink-checkpoint-init
     restart: "no"
@@ -371,6 +382,7 @@ services:
       - flink_checkpoints:/tmp/flink-checkpoints
 
   flink-jobmanager:
+    profiles: [etl]
     build:
       context: ./flink
     container_name: retailpulse-flink-jobmanager
@@ -420,6 +432,7 @@ services:
   # ==========================================================
 
   flink-taskmanager:
+    profiles: [etl]
     build:
       context: ./flink
     container_name: retailpulse-flink-taskmanager
@@ -472,6 +485,7 @@ services:
       - flink_checkpoints:/tmp/flink-checkpoints   
 
   spark:
+    profiles: [legacy-spark]
     image: apache/spark:4.0.1
 
     container_name: retailpulse-spark
@@ -501,6 +515,7 @@ services:
   
 
   spark-iceberg:
+    profiles: [etl]
     build:
       context: .
       dockerfile: spark/iceberg/Dockerfile
@@ -524,6 +539,7 @@ services:
       - minio
 
   spark-thrift:
+    profiles: [etl]
     build:
       context: .
       dockerfile: spark/iceberg/Dockerfile
@@ -561,6 +577,7 @@ services:
     depends_on: [minio]
 
   dbt:
+    profiles: [etl]
     build:
       context: .
       dockerfile: dbt/Dockerfile
@@ -576,6 +593,7 @@ services:
 
     
   quality:
+    profiles: [etl]
     build:
       context: .
       dockerfile: quality/Dockerfile
@@ -600,7 +618,85 @@ services:
       - spark-thrift
 
 
+  mlflow-db:
+    image: postgres:16
+    container_name: retailpulse-mlflow-db
+    hostname: mlflow-db
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    volumes:
+      - mlflow-db-data:/var/lib/postgresql/data
+    networks:
+      - retailpulse
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow -d mlflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mlflow:
+    profiles: [mlflow]
+    build:
+      context: .
+      dockerfile: ml/mlflow.Dockerfile
+    container_name: retailpulse-mlflow
+    hostname: mlflow
+    environment:
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    ports:
+      - "5000:5000"
+    command:
+      - mlflow
+      - server
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+      - --allowed-hosts
+      - mlflow:5000,localhost:*,127.0.0.1:*
+      - --backend-store-uri
+      - postgresql://mlflow:mlflow@mlflow-db:5432/mlflow
+      - --artifacts-destination
+      - s3://retailpulse/mlflow-artifacts
+    depends_on:
+      mlflow-db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - retailpulse
+
+  ml:
+    build:
+      context: .
+      dockerfile: ml/Dockerfile
+    container_name: retailpulse-ml
+    hostname: retailpulse-ml
+
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: retailpulse
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_EXPERIMENT_NAME: retailpulse-churn
+
+    volumes:
+      - ./ml:/opt/retailpulse/ml
+
+    networks:
+      - retailpulse
+
+    command:
+      - sleep
+      - infinity
+
   superset-db:
+    profiles: [analytics]
     image: postgres:16
     container_name: retailpulse-superset-db
     hostname: superset-db
@@ -618,6 +714,7 @@ services:
       retries: 10
 
   superset-redis:
+    profiles: [analytics]
     image: redis:7-alpine
     container_name: retailpulse-superset-redis
     hostname: superset-redis
@@ -627,6 +724,7 @@ services:
     networks: [retailpulse]
 
   superset-init:
+    profiles: [analytics]
     build:
       context: .
       dockerfile: superset/Dockerfile
@@ -649,6 +747,7 @@ services:
     networks: [retailpulse]
 
   superset:
+    profiles: [analytics]
     build:
       context: .
       dockerfile: superset/Dockerfile
@@ -681,6 +780,7 @@ services:
     networks: [retailpulse]
 
   airflow-db:
+    profiles: [airflow]
     container_name: airflow-airflow-db-1
     image: postgres:16
     environment:
@@ -699,6 +799,7 @@ services:
       - airflow-internal
 
   airflow-init:
+    profiles: [airflow]
     container_name: airflow-airflow-init-1
     <<: *airflow-common
     entrypoint: /bin/bash
@@ -708,6 +809,7 @@ services:
         airflow db migrate
     restart: "no"
   airflow-apiserver:
+    profiles: [airflow]
     <<: *airflow-common
     container_name: airflow-airflow-apiserver-1
     depends_on:
@@ -724,6 +826,7 @@ services:
     restart: unless-stopped
 
   airflow-scheduler:
+    profiles: [airflow]
     <<: *airflow-common
     container_name: airflow-airflow-scheduler-1
     depends_on:
@@ -733,6 +836,7 @@ services:
     restart: unless-stopped
 
   airflow-dag-processor:
+    profiles: [airflow]
     <<: *airflow-common
     container_name: airflow-airflow-dag-processor-1
     depends_on:
@@ -742,6 +846,7 @@ services:
     restart: unless-stopped
 
   airflow-triggerer:
+    profiles: [airflow]
     <<: *airflow-common
     container_name: airflow-airflow-triggerer-1
     depends_on:
@@ -773,6 +878,7 @@ volumes:
   spark-iceberg-ivy:
   superset-db-data:
   superset-redis-data:
+  mlflow-db-data:
 
   airflow-db-data:
     name: airflow_airflow-db-data

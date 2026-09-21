@@ -1,0 +1,9 @@
+pandas
+numpy
+scikit-learn
+joblib
+pyarrow
+minio
+mlflow
+boto3
+psycopg2-binary

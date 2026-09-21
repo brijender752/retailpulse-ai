@@ -4,9 +4,210 @@
 
 An end-to-end real-time data engineering and GenAI platform for e-commerce analytics.
 
+## Start Docker containers step by step
+
+Run these commands from the repository root using `docker-compose.yml`.
+Each step adds containers without stopping the previous group.
+
+### 1. Start ingestion
+
+Starts PostgreSQL, Kafka, Debezium, MinIO, and topic/connector initialization.
+
+```bash
+docker compose --profile ingestion up -d --build
+```
+
+### 2. Start ETL
+
+Starts Flink JobManager/TaskManager, Spark Iceberg, Spark Thrift, dbt, quality,
+and shared source/storage dependencies.
+
+```bash
+docker compose --profile etl up -d --build
+```
+
+### 3. Start Airflow
+
+Starts the Airflow database, migration, API server, scheduler, DAG processor,
+and triggerer.
+
+```bash
+docker compose --profile airflow up -d --build
+```
+
+### 4. Start analytics
+
+Starts Superset, its PostgreSQL database, Redis, and initialization.
+
+```bash
+docker compose --profile analytics up -d --build
+```
+
+### 5. Start Kafka UI
+
+```bash
+docker compose --profile tools up -d
+```
+
+### 6. Start the original Spark container (optional)
+
+Needed only for older manual Spark jobs.
+
+```bash
+docker compose --profile legacy-spark up -d
+```
+
+### 7. Start ML and run churn training
+
+Build and start the ML container:
+
+```bash
+docker compose up -d --build ml
+docker compose ps ml
+```
+
+The container stays running with `sleep infinity`. It uses MinIO at
+`minio:9000` and mounts `./ml` at `/opt/retailpulse/ml`.
+
+With MinIO and `spark-iceberg` running and the
+`retailpulse.ml.churn_training` table populated, export the training data:
+
+```bash
+docker compose exec spark-iceberg spark-submit /opt/retailpulse/ml/training/export_churn_training.py
+```
+
+This replaces the export at `s3://retailpulse/ml/exports/churn_training/`.
+Train the churn models from that export:
+
+```bash
+docker compose exec ml python /opt/retailpulse/ml/training/train_churn_model.py
+```
+
+Models and metadata are saved in `ml/models/`; comparison metrics and test
+predictions are saved in `ml/artifacts/` on the host through the bind mount.
+Re-run the build/start command after changing `ml/requirements.txt` or
+`ml/Dockerfile`. Python source edits are available immediately through the mount.
+
+To open a shell or stop the ML container:
+
+```bash
+docker compose exec ml bash
+docker compose stop ml
+```
+
+### 8. Check container status and memory
+
+```bash
+docker compose --profile "*" ps -a
+docker stats --no-stream
+```
+
+Initialization containers should show **Exited (0)** after completing successfully.
+Existing container names, networks, and data volumes are preserved.
+
+Alternatively, start every group with one command:
+
+```bash
+docker compose --profile "*" up -d --build
+```
+
+Starting everything removes the memory savings of selective groups. These commands
+start containers; trigger your Airflow DAG separately to run the pipeline.
+
+### Stop all services at once
+
+Run from the repository root after active pipeline runs finish:
+
+```bash
+docker compose --profile "*" stop
+```
+
+This stops services belonging to the current root Compose project, including all
+optional profiles, while preserving containers, volumes, and data. It does not
+stop containers from other Compose projects or containers started manually.
+
+If you previously used the separate Airflow deployment, stop that project too:
+
+```bash
+docker compose -p airflow -f docker-compose.airflow.yml stop
+```
+
+Check which containers are still running and which Compose project owns them:
+
+```bash
+docker ps --format 'table {{.Names}}\t{{.Label "com.docker.compose.project"}}\t{{.Status}}'
+```
+
+You can stop any remaining project containers by their exact names:
+
+```bash
+docker stop <container-name-1> <container-name-2>
+```
+
+Replace the placeholders with names from `docker ps`. Only select containers you
+intend to stop. If you want to stop **every running Docker container on this
+machine**, including unrelated projects, use the command for your shell:
+
+```powershell
+# PowerShell
+$runningContainers = @(docker ps -q)
+if ($runningContainers.Count -gt 0) { docker stop $runningContainers }
+```
+
+```bash
+# Git Bash / WSL / Linux
+docker ps -q | xargs -r docker stop
+```
+
+Run `docker ps` again to verify that no containers remain running.
+
+### Stop unused groups to reduce memory
+
+For an existing full stack, finish active DAG runs, then switch to ingestion only:
+
+```bash
+docker compose --profile '*' stop
+docker compose --profile ingestion up -d
+```
+
+Optional profiles: `analytics` starts Superset and its database/Redis;
+`tools` starts Kafka UI and source dependencies; `legacy-spark` starts the original
+plain Spark container and MinIO. Superset SQL queries require ETL's Spark Thrift.
+The full end-to-end DAG requires ingestion, ETL, Airflow, and analytics:
+
+```bash
+docker compose --profile ingestion --profile etl --profile airflow --profile analytics up -d --build
+```
+
+`scripts/start_streaming.sh` enables these four profiles using the root Compose
+file. Use that deployment instead of running the standalone Airflow Compose file
+alongside it. Older bare `docker compose up` instructions below must now specify
+profiles; commands targeting individual services still work.
+
+To stop ETL while keeping ingestion running:
+
+```bash
+docker compose stop flink-jobmanager flink-taskmanager spark-iceberg spark-thrift dbt quality
+docker compose --profile airflow stop
+docker compose --profile analytics stop
+docker compose stop kafka-ui spark
+```
+
+Use `stop` to retain data; do not use `down -v`. Restarting Flink containers alone
+does not resubmit streaming jobs: run the streaming controller/end-to-end DAG when
+resuming. Kafka backlog grows while ETL is stopped, subject to Kafka retention.
+Airflow starts independently, but its DAGs need the corresponding service groups.
+
+Memory savings come from stopping unused services. Flink retains its 4 GB process
+budget because a smaller heap previously failed with the six-job workload.
+Airflow now defaults to two concurrent tasks and one DAG parser. Optional root
+`.env` overrides are `AIRFLOW_PARALLELISM=2`,
+`AIRFLOW_MAX_ACTIVE_TASKS_PER_DAG=2`, and `AIRFLOW_PARSING_PROCESSES=1`.
+These limit concurrency, not memory directly. Measure usage with
+`docker stats --no-stream`.
+
 ## Local service URLs
 
-Start the stack from the repository root with `docker compose up -d --build`.
 These addresses use the host ports in `docker-compose.yml`.
 
 | Service | Local URL | Purpose |
@@ -59,6 +260,22 @@ Inside Docker containers, use service names instead of `localhost`, for example
 `http://superset:8088`, `http://minio:9000`, `kafka:9092`, and
 `hive://superset@spark-thrift:10000/analytics`. Airflow listens on port 8080
 inside its container and is exposed on host port 8090.
+
+### Query Iceberg with Beeline
+
+With Spark Thrift running, connect from Bash or Git Bash:
+
+```bash
+docker exec -it retailpulse-spark-thrift \
+  /opt/spark/bin/beeline \
+  -u 'jdbc:hive2://localhost:10000/'
+```
+
+At the Beeline prompt, list the namespaces in the RetailPulse catalog:
+
+```sql
+SHOW NAMESPACES IN retailpulse;
+```
 
 ## Architecture
 
