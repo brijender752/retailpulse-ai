@@ -33,6 +33,13 @@ CHURN_TRAINING_TABLE = (
     "retailpulse.ml.churn_training"
 )
 
+CHURN_SCORING_FEATURES_TABLE = (
+    "retailpulse.ml.churn_scoring_features"
+)
+
+CHURN_PREDICTIONS_TABLE = (
+    "retailpulse.ml.churn_predictions"
+)
 
 CHURN_HORIZON_DAYS = 60
 
@@ -47,3 +54,70 @@ CHURN_TRAINING_TABLE = "retailpulse.ml.churn_training"
 CHURN_HORIZON_DAYS = 60
 
 FEATURE_WINDOWS = [30, 90, 180]
+
+# ============================================================
+# RECOMMENDATION ENGINE
+# ============================================================
+
+PRODUCTS_TABLE = (
+    "retailpulse.silver.products"
+)
+
+ORDER_ITEMS_TABLE = (
+    "retailpulse.silver.order_items"
+)
+
+RECOMMENDATION_INTERACTIONS_TABLE = (
+    "retailpulse.ml.customer_product_interactions"
+)
+
+PRODUCT_POPULARITY_TABLE = (
+    "retailpulse.ml.product_popularity"
+)
+
+PRODUCT_SIMILARITY_TABLE = (
+    "retailpulse.ml.product_similarity"
+)
+
+PRODUCT_RECOMMENDATIONS_TABLE = (
+    "retailpulse.ml.product_recommendations"
+)
+
+
+PURCHASE_WEIGHT = 5.0
+
+PRODUCT_VIEW_WEIGHT = 1.0
+
+# ============================================================
+# ITEM-ITEM RECOMMENDER
+# ============================================================
+
+PRODUCT_SIMILARITY_TABLE = (
+    "retailpulse.ml.product_similarity"
+)
+
+ITEM_ITEM_RECOMMENDATIONS_TABLE = (
+    "retailpulse.ml.item_item_recommendations"
+)
+
+MIN_PRODUCT_CUSTOMERS = 2
+MIN_CO_INTERACTIONS = 2
+
+TOP_SIMILAR_PRODUCTS = 50
+TOP_RECOMMENDATIONS = 10
+
+# ============================================================
+# HYBRID RECOMMENDER
+# ============================================================
+
+PRODUCT_RECOMMENDATIONS_TABLE = (
+    "retailpulse.ml.product_recommendations"
+)
+
+HYBRID_PERSONALIZED_WEIGHT = 0.80
+
+HYBRID_POPULARITY_WEIGHT = 0.20
+
+HYBRID_CANDIDATE_LIMIT = 100
+
+TOP_RECOMMENDATIONS = 10

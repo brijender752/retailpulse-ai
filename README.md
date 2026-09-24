@@ -266,7 +266,7 @@ inside its container and is exposed on host port 8090.
 With Spark Thrift running, connect from Bash or Git Bash:
 
 ```bash
-docker exec -it retailpulse-spark-thrift \
+MSYS_NO_PATHCONV=1 docker exec -it retailpulse-spark-thrift \
   /opt/spark/bin/beeline \
   -u 'jdbc:hive2://localhost:10000/'
 ```
@@ -276,6 +276,36 @@ At the Beeline prompt, list the namespaces in the RetailPulse catalog:
 ```sql
 SHOW NAMESPACES IN retailpulse;
 ```
+
+After running `ml/recommendation/training/build_product_similarity.py`,
+check the saved similarity row count:
+
+```sql
+SELECT COUNT(*) AS similarity_rows
+FROM retailpulse.ml.product_similarity;
+```
+
+Preview 10 saved similarity records, ordered by source product and rank:
+
+```sql
+SELECT *
+FROM retailpulse.ml.product_similarity
+ORDER BY source_product_id, similarity_rank
+LIMIT 10;
+```
+
+Enter SQL directly in Beeline, without Python wrappers such as
+`spark.sql(...).show()`. The `LIMIT 10` clause only limits the displayed
+results; it does not change the saved table.
+
+Exit Beeline with:
+
+```text
+!quit
+```
+
+`MSYS_NO_PATHCONV=1` prevents Git Bash from converting the container's
+`/opt/spark/bin/beeline` path into a Windows path.
 
 ## Architecture
 

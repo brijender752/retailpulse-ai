@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1530" viewBox="0 0 1400 1530" role="img" aria-labelledby="title desc">
+  <title id="title">RetailPulse churn system</title>
+  <desc id="desc">Airflow orchestrates two paths. Historical Iceberg data becomes point-in-time training data, receives time-based model evaluation, and flows through MLflow experiments and the Model Registry to RetailPulseChurnModel at the champion alias. Current Iceberg data becomes point-in-time scoring features. Both paths meet at registered model inference, followed by probability and risk band, revenue at risk, Iceberg predictions, validation, monitoring history, and Superset.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#f4f8ff"/><stop offset="1" stop-color="#effaf7"/></linearGradient>
+    <linearGradient id="train" x2="1"><stop stop-color="#3156cf"/><stop offset="1" stop-color="#597be5"/></linearGradient>
+    <linearGradient id="score" x2="1"><stop stop-color="#0c897d"/><stop offset="1" stop-color="#19a595"/></linearGradient>
+    <linearGradient id="merge" x2="1"><stop stop-color="#1c658e"/><stop offset="1" stop-color="#117f83"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-40%" width="140%" height="190%"><feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#17324d" flood-opacity=".10"/></filter>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto"><path d="M1 1 5 8 9 1" fill="none" stroke="#5371c3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto"><path d="M1 1 5 8 9 1" fill="none" stroke="#399789" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <marker id="arrowMain" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto"><path d="M1 1 5 8 9 1" fill="none" stroke="#46839a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    <style>
+      text { font-family: Inter, 'Segoe UI', Arial, sans-serif; fill: #16344f; }
+      .title { font-size: 38px; font-weight: 800; letter-spacing: -.7px; }
+      .lane { font-size: 17px; font-weight: 800; letter-spacing: 2.4px; }
+      .node { font-size: 22px; font-weight: 680; }
+      .nodeSmall { font-size: 20px; font-weight: 680; }
+      .white { fill: #fff; }
+      .blueFlow { fill: none; stroke: #5371c3; stroke-width: 3; marker-end: url(#arrowBlue); }
+      .greenFlow { fill: none; stroke: #399789; stroke-width: 3; marker-end: url(#arrowGreen); }
+      .mainFlow { fill: none; stroke: #46839a; stroke-width: 3; marker-end: url(#arrowMain); }
+    </style>
+  </defs>
+
+  <rect width="1400" height="1530" rx="30" fill="url(#bg)"/>
+  <text class="title" x="700" y="74" text-anchor="middle">RETAILPULSE CHURN SYSTEM</text>
+
+  <rect x="55" y="112" width="1290" height="1360" rx="32" fill="none" stroke="#a8c2db" stroke-width="3" stroke-dasharray="12 9"/>
+  <rect x="494" y="1434" width="412" height="68" rx="34" fill="#e0edfb" stroke="#a8c2db" stroke-width="2"/>
+  <text x="700" y="1463" text-anchor="middle" style="font-size:22px;font-weight:800;fill:#25558a">AIRFLOW</text>
+  <text x="700" y="1487" text-anchor="middle" style="font-size:16px;font-weight:600;fill:#43627f">orchestrates every stage</text>
+
+  <text class="lane" x="366" y="155" text-anchor="middle" fill="#3156cf">TRAINING + REGISTRY</text>
+  <text class="lane" x="1034" y="155" text-anchor="middle" fill="#0c897d">CURRENT SCORING</text>
+
+  <rect x="168" y="180" width="396" height="66" rx="16" fill="#fff" stroke="#cbd8f2" filter="url(#shadow)"/>
+  <text class="node" x="366" y="222" text-anchor="middle">Historical Iceberg data</text>
+  <path class="blueFlow" d="M366 250 V271"/>
+  <rect x="168" y="290" width="396" height="66" rx="16" fill="#fff" stroke="#cbd8f2" filter="url(#shadow)"/>
+  <text class="node" x="366" y="332" text-anchor="middle">Point-in-time training data</text>
+  <path class="blueFlow" d="M366 360 V381"/>
+  <rect x="168" y="400" width="396" height="66" rx="16" fill="#fff" stroke="#cbd8f2" filter="url(#shadow)"/>
+  <text class="node" x="366" y="442" text-anchor="middle">Time-based model evaluation</text>
+  <path class="blueFlow" d="M366 470 V491"/>
+  <rect x="168" y="510" width="396" height="66" rx="16" fill="#fff" stroke="#cbd8f2" filter="url(#shadow)"/>
+  <text class="node" x="366" y="552" text-anchor="middle">MLflow experiments</text>
+  <path class="blueFlow" d="M366 580 V601"/>
+  <rect x="168" y="620" width="396" height="66" rx="16" fill="#fff" stroke="#cbd8f2" filter="url(#shadow)"/>
+  <text class="node" x="366" y="662" text-anchor="middle">Model Registry</text>
+  <path class="blueFlow" d="M366 690 V711"/>
+  <rect x="143" y="730" width="446" height="76" rx="18" fill="url(#train)" filter="url(#shadow)"/>
+  <text class="nodeSmall white" x="366" y="760" text-anchor="middle">RetailPulseChurnModel</text>
+  <text x="366" y="789" text-anchor="middle" style="font-size:18px;font-weight:780;fill:#fff">@champion</text>
+
+  <rect x="836" y="180" width="396" height="66" rx="16" fill="#fff" stroke="#bde3da" filter="url(#shadow)"/>
+  <text class="node" x="1034" y="222" text-anchor="middle">Current Iceberg data</text>
+  <path class="greenFlow" d="M1034 250 V271"/>
+  <rect x="836" y="290" width="396" height="66" rx="16" fill="#fff" stroke="#bde3da" filter="url(#shadow)"/>
+  <text class="node" x="1034" y="332" text-anchor="middle">Point-in-time scoring features</text>
+
+  <path class="blueFlow" d="M366 810 V846 H681 V862"/>
+  <path class="greenFlow" d="M1034 360 V846 H719 V862"/>
+  <rect x="430" y="880" width="540" height="76" rx="19" fill="url(#merge)" filter="url(#shadow)"/>
+  <text class="node white" x="700" y="927" text-anchor="middle">Registered model inference</text>
+  <path class="mainFlow" d="M700 960 V978"/>
+
+  <rect x="430" y="996" width="540" height="58" rx="15" fill="#fff" stroke="#c8dee7" filter="url(#shadow)"/>
+  <text class="node" x="700" y="1033" text-anchor="middle">Probability + risk band</text>
+  <path class="mainFlow" d="M700 1058 V1072"/>
+  <rect x="430" y="1090" width="540" height="58" rx="15" fill="#fff" stroke="#c8dee7" filter="url(#shadow)"/>
+  <text class="node" x="700" y="1127" text-anchor="middle">Revenue-at-risk</text>
+  <path class="mainFlow" d="M700 1152 V1166"/>
+  <rect x="430" y="1184" width="540" height="58" rx="15" fill="#fff" stroke="#c8dee7" filter="url(#shadow)"/>
+  <text class="node" x="700" y="1221" text-anchor="middle">Iceberg predictions</text>
+  <path class="mainFlow" d="M700 1246 V1260"/>
+  <rect x="430" y="1278" width="540" height="58" rx="15" fill="#fff" stroke="#c8dee7" filter="url(#shadow)"/>
+  <text class="node" x="700" y="1315" text-anchor="middle">Validation</text>
+  <path class="mainFlow" d="M700 1340 V1354"/>
+  <rect x="430" y="1372" width="540" height="58" rx="15" fill="#fff" stroke="#c8dee7" filter="url(#shadow)"/>
+  <text class="node" x="700" y="1409" text-anchor="middle">Monitoring history</text>
+  <path class="mainFlow" d="M974 1401 H1183 V1354"/>
+  <rect x="1098" y="1278" width="170" height="58" rx="15" fill="#ddebea" stroke="#aed3cc"/>
+  <text class="node" x="1183" y="1315" text-anchor="middle">Superset</text>
+</svg>

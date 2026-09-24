@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">RetailPulse product popularity pipeline</title>
+  <desc id="desc">Customer product interactions branch into global, category, and trending popularity signals. The signals combine into the retailpulse.ml.product_popularity table, which produces top N products.</desc>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1">
+      <stop stop-color="#f4f8ff"/>
+      <stop offset="1" stop-color="#eef9f6"/>
+    </linearGradient>
+    <linearGradient id="source" x2="1">
+      <stop stop-color="#3156cf"/>
+      <stop offset="1" stop-color="#5276df"/>
+    </linearGradient>
+    <linearGradient id="table" x2="1">
+      <stop stop-color="#176c8d"/>
+      <stop offset="1" stop-color="#0d9488"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-35%" width="140%" height="180%">
+      <feDropShadow dx="0" dy="7" stdDeviation="11" flood-color="#17324d" flood-opacity=".12"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto">
+      <path d="M1 1 L5 8 L9 1" fill="none" stroke="#4e7f9f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: Inter, 'Segoe UI', Arial, sans-serif; fill: #17344f; }
+      .title { font-size: 34px; font-weight: 800; letter-spacing: -.5px; }
+      .node { font-size: 25px; font-weight: 700; }
+      .branch { font-size: 23px; font-weight: 720; }
+      .white { fill: #fff; }
+      .flow { fill: none; stroke: #4e7f9f; stroke-width: 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="900" rx="28" fill="url(#background)"/>
+  <text class="title" x="600" y="65" text-anchor="middle">Product popularity pipeline</text>
+
+  <rect x="285" y="105" width="630" height="86" rx="20" fill="url(#source)" filter="url(#shadow)"/>
+  <text class="node white" x="600" y="158" text-anchor="middle">customer_product_interactions</text>
+
+  <path class="flow" d="M600 195 V247 H265 V285"/>
+  <path class="flow" d="M600 195 V285"/>
+  <path class="flow" d="M600 247 H935 V285"/>
+
+  <rect x="115" y="305" width="300" height="90" rx="19" fill="#fff" stroke="#cbd9ef" filter="url(#shadow)"/>
+  <circle cx="165" cy="350" r="17" fill="#dfe8ff"/>
+  <path d="M156 350h18M165 341v18" stroke="#3156cf" stroke-width="3" stroke-linecap="round"/>
+  <text class="branch" x="280" y="358" text-anchor="middle">Global</text>
+
+  <rect x="450" y="305" width="300" height="90" rx="19" fill="#fff" stroke="#cbd9ef" filter="url(#shadow)"/>
+  <circle cx="500" cy="350" r="17" fill="#e5e8ff"/>
+  <path d="M492 342h16v16h-16z" fill="none" stroke="#5865c7" stroke-width="2.5"/>
+  <text class="branch" x="620" y="358" text-anchor="middle">Category</text>
+
+  <rect x="785" y="305" width="300" height="90" rx="19" fill="#fff" stroke="#bfe1db" filter="url(#shadow)"/>
+  <circle cx="835" cy="350" r="17" fill="#dcf4ee"/>
+  <path d="M826 357l7-8 6 4 8-12" fill="none" stroke="#0d9488" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text class="branch" x="950" y="358" text-anchor="middle">Trending</text>
+
+  <path class="flow" d="M265 399 V462 H600 V500"/>
+  <path class="flow" d="M600 399 V500"/>
+  <path class="flow" d="M935 399 V462 H600"/>
+
+  <rect x="245" y="520" width="710" height="92" rx="21" fill="url(#table)" filter="url(#shadow)"/>
+  <text class="node white" x="600" y="576" text-anchor="middle">retailpulse.ml.product_popularity</text>
+
+  <path class="flow" d="M600 616 V680"/>
+
+  <rect x="390" y="700" width="420" height="92" rx="22" fill="#fff" stroke="#b9dbd7" stroke-width="2" filter="url(#shadow)"/>
+  <circle cx="452" cy="746" r="24" fill="#d9f3ed"/>
+  <path d="M441 753h22M445 746h18M450 739h13" stroke="#0d887c" stroke-width="3" stroke-linecap="round"/>
+  <text class="node" x="625" y="755" text-anchor="middle">Top-N products</text>
+</svg>
