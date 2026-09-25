@@ -1,0 +1,24 @@
+{
+  "project": "retailpulse-ai",
+  "model": "popularity",
+  "configuration": {
+    "algorithm": "global_popularity",
+    "top_k": 10,
+    "personalized_weight": 0.0,
+    "popularity_weight": 1.0,
+    "similarity": "none"
+  },
+  "evaluation": {
+    "type": "time_based_holdout",
+    "top_k": 10
+  },
+  "metrics": {
+    "precision_at_10": 0.013154320342701661,
+    "recall_at_10": 0.009920933739116185,
+    "hit_rate_at_10": 0.12308013791662313,
+    "map_at_10": 0.004066025331256134,
+    "ndcg_at_10": 0.01329904177016056,
+    "catalog_coverage": 0.013
+  },
+  "created_at": "2026-09-25T14:06:53.419476+00:00"
+}

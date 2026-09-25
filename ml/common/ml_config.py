@@ -121,3 +121,42 @@ HYBRID_POPULARITY_WEIGHT = 0.20
 HYBRID_CANDIDATE_LIMIT = 100
 
 TOP_RECOMMENDATIONS = 10
+
+
+# ============================================================
+# RECOMMENDATION EVALUATION
+# ============================================================
+
+RECOMMENDATION_EVALUATION_TABLE = (
+    "retailpulse.ml.recommendation_evaluation"
+)
+
+RECOMMENDATION_METRICS_TABLE = (
+    "retailpulse.ml.recommendation_metrics"
+)
+
+RECOMMENDATION_EVAL_TOP_K = 10
+
+RECOMMENDATION_TEST_DAYS = 30
+
+RECOMMENDATION_MIN_HISTORY = 2
+
+
+
+# ============================================================
+# RECOMMENDATION MLFLOW
+# ============================================================
+
+RECOMMENDATION_MLFLOW_EXPERIMENT = (
+    "retailpulse-recommendation"
+)
+
+RECOMMENDATION_REGISTERED_MODEL = (
+    "RetailPulseRecommendationModel"
+)
+
+RECOMMENDATION_MODEL_ALIAS = (
+    "champion"
+)
+
+RECOMMENDATION_MODEL_VERSION = "v1"
