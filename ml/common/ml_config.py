@@ -160,3 +160,51 @@ RECOMMENDATION_MODEL_ALIAS = (
 )
 
 RECOMMENDATION_MODEL_VERSION = "v1"
+
+
+
+# ============================================================
+# PRODUCTION RECOMMENDATION
+# ============================================================
+
+RECOMMENDATION_EVENTS_TABLE = (
+    "retailpulse.ml.customer_product_events"
+)
+
+RECOMMENDATION_INTERACTIONS_TABLE = (
+    "retailpulse.ml.customer_product_interactions"
+)
+
+PRODUCT_POPULARITY_TABLE = (
+    "retailpulse.ml.product_popularity"
+)
+
+PRODUCT_SIMILARITY_TABLE = (
+    "retailpulse.ml.product_similarity"
+)
+
+PRODUCT_RECOMMENDATIONS_TABLE = (
+    "retailpulse.ml.product_recommendations"
+)
+
+RECOMMENDATION_RUN_HISTORY_TABLE = (
+    "retailpulse.ml.recommendation_run_history"
+)
+
+CUSTOMERS_TABLE = (
+    "retailpulse.analytics.dim_customer"
+)
+
+PRODUCTS_TABLE = (
+    "retailpulse.silver.products"
+)
+
+TOP_RECOMMENDATIONS = 10
+
+RECOMMENDATION_CANDIDATE_LIMIT = 100
+
+MIN_PRODUCT_CUSTOMERS = 2
+
+MIN_CO_INTERACTIONS = 2
+
+TOP_SIMILAR_PRODUCTS = 50

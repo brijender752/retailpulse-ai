@@ -74,7 +74,7 @@ services:
   # ==========================================================
 
   postgres:
-    profiles: [ingestion, etl, tools]
+    profiles: [ingestion, etl, tools, api]
     image: postgres:16
     container_name: retailpulse-postgres
     restart: unless-stopped
@@ -527,6 +527,11 @@ services:
       - ./:/opt/retailpulse
       - spark-iceberg-ivy:/root/.ivy2
     environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       ICEBERG_VERSION: "1.11.0"
       HADOOP_AWS_PACKAGE: "org.apache.hadoop:hadoop-aws:3.4.1"
       MINIO_S3A_ENDPOINT: "http://minio:9000"
@@ -854,6 +859,37 @@ services:
         condition: service_completed_successfully
     command: triggerer
     restart: unless-stopped
+
+
+  retailpulse-api:
+    profiles: [api]
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+
+    container_name: retailpulse-api
+
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: qwen3:4b
+      OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-300}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - retailpulse
 
 
 networks:

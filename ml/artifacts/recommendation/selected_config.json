@@ -1,0 +1,12 @@
+{
+  "model": "hybrid_80_20",
+  "personalized_weight": 0.8,
+  "popularity_weight": 0.2,
+  "top_k": 10,
+  "selection_metric": "validation_hit_rate_at_10",
+  "validation_metrics": {
+    "precision_at_10": 0.0027758738862234383,
+    "recall_at_10": 0.010690351077602616,
+    "hit_rate_at_10": 0.027758738862234407
+  }
+}
