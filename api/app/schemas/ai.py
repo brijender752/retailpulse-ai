@@ -38,3 +38,5 @@ class CustomerAIResponse(BaseModel):
     ) = None
 
     model: str | None = None
+
+    sources: list[str] = []

@@ -11,6 +11,10 @@ from app.ai.tools import (
     get_customer_intelligence,
 )
 
+from app.rag.retrieval import (
+    retrieve_context,
+)
+
 
 def is_direct_recommendation_question(question: str) -> bool:
     normalized = " ".join(question.lower().split()).rstrip("?.!")
@@ -60,6 +64,7 @@ async def answer_customer_question(
                 "was not found."
             ),
             "model": None,
+            "sources": [],
         }
 
     if is_direct_recommendation_question(question):
@@ -73,7 +78,14 @@ async def answer_customer_question(
                 "recommendations": bool(context.get("recommendations")),
             },
             "model": None,
+            "sources": [],
         }
+
+    rag_results = await retrieve_context(question, limit=4)
+    rag_context = "\n\n".join(
+        f"Source: {item['source']}\n{item['text']}"
+        for item in rag_results
+    )
 
     context_json = json.dumps(
         context,
@@ -85,23 +97,26 @@ async def answer_customer_question(
 Customer ID:
 {customer_id}
 
-RetailPulse context:
+STRUCTURED RETAILPULSE DATA:
 
 {context_json}
 
-User question:
+RETRIEVED RETAILPULSE KNOWLEDGE:
+
+{rag_context}
+
+USER QUESTION:
 
 {question}
 
-Answer using only the supplied RetailPulse context for
-customer-specific facts.
-
-Answer the specific question directly in at most 180 words.
-For product recommendations, list the top 5 supplied products in rank order
-with their supplied reasons. Include product IDs. Do not add unrelated
-customer overview or churn sections unless the question asks for them.
-
+Instructions:
+Use structured data for customer-specific facts.
+Use retrieved knowledge for RetailPulse definitions,
+methodology and system explanations.
 Do not invent missing information.
+A machine-learning prediction is not a guaranteed outcome.
+When relevant, explain which information came from
+customer data and which came from RetailPulse knowledge.
 """
 
     messages = [
@@ -140,4 +155,7 @@ Do not invent missing information.
             ),
         },
         "model": ollama.model,
+        "sources": list(dict.fromkeys(
+            item["source"] for item in rag_results if item.get("source")
+        )),
     }

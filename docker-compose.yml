@@ -883,14 +883,38 @@ services:
       OLLAMA_URL: http://host.docker.internal:11434
       OLLAMA_MODEL: qwen3:4b
       OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-300}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: retailpulse_knowledge
+      EMBEDDING_MODEL: nomic-embed-text
 
     depends_on:
       postgres:
         condition: service_healthy
 
+    volumes:
+      - ./knowledge:/knowledge:ro    
+
     networks:
       - retailpulse
+  
 
+
+  qdrant:
+    image: qdrant/qdrant:latest
+
+    container_name: retailpulse-qdrant
+
+    restart: unless-stopped
+
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+    networks:
+      - retailpulse
 
 networks:
   airflow-internal:
@@ -914,6 +938,7 @@ volumes:
   spark-iceberg-ivy:
   superset-db-data:
   superset-redis-data:
+  qdrant-data:
   mlflow-db-data:
 
   airflow-db-data:

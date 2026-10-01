@@ -27,5 +27,11 @@ class Settings(BaseSettings):
 
     ollama_num_predict: int = 384
 
+    qdrant_url: str = "http://qdrant:6333"
+
+    qdrant_collection: str = "retailpulse_knowledge"
+
+    embedding_model: str = "nomic-embed-text"
+
 
 settings = Settings()

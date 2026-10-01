@@ -14,6 +14,10 @@ from app.schemas.ai import (
     CustomerAIResponse,
 )
 
+from app.rag.ingestion import (
+    ingest_knowledge,
+)
+
 
 router = APIRouter(
     prefix="/ai",
@@ -73,3 +77,11 @@ async def customer_ai(
             status_code=502,
             detail="Local LLM service returned an invalid or incomplete response.",
         ) from exc
+
+
+@router.post(
+    "/knowledge/ingest"
+)
+async def ingest():
+
+    return await ingest_knowledge()
