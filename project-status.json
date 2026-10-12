@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Data Engineering",
+    "percent": 90,
+    "scope": "CDC, Kafka, PyFlink, Spark, MinIO, Iceberg"
+  },
+  {
+    "name": "Analytics & Orchestration",
+    "percent": 80,
+    "scope": "dbt, Airflow, Superset, Customer 360"
+  },
+  {
+    "name": "Machine Learning",
+    "percent": 85,
+    "scope": "Churn, recommendations, MLflow"
+  },
+  {
+    "name": "FastAPI Serving",
+    "percent": 75,
+    "scope": "Customer, churn and recommendation APIs"
+  },
+  {
+    "name": "GenAI",
+    "percent": 65,
+    "scope": "Ollama, RAG, Qdrant, retrieval evaluation"
+  },
+  {
+    "name": "Production Readiness",
+    "percent": 20,
+    "scope": "Monitoring, testing, security, CI/CD and deployment"
+  }
+]

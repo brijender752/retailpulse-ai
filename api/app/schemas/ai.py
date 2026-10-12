@@ -23,6 +23,15 @@ class ContextUsed(BaseModel):
     recommendations: bool
 
 
+class RAGSource(BaseModel):
+
+    source: str | None = None
+
+    heading: str | None = None
+
+    score: float | None = None
+
+
 class CustomerAIResponse(BaseModel):
 
     customer_id: int
@@ -39,4 +48,4 @@ class CustomerAIResponse(BaseModel):
 
     model: str | None = None
 
-    sources: list[str] = []
+    sources: list[RAGSource] = []

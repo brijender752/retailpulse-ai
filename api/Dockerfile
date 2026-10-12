@@ -9,6 +9,7 @@ RUN pip install \
     -r requirements.txt
 
 COPY api/app ./app
+COPY api/evaluation ./evaluation
 
 EXPOSE 8000
 

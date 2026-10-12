@@ -4,6 +4,29 @@
 
 An end-to-end real-time data engineering, machine learning, and GenAI platform for e-commerce analytics.
 
+<!-- project-status:start -->
+## Overall project status
+
+Completion estimates maintained as project milestones are completed.
+
+| Area | Complete | Progress | Scope |
+| --- | ---: | --- | --- |
+| Data Engineering | **90%** | `##################--` | CDC, Kafka, PyFlink, Spark, MinIO, Iceberg |
+| Analytics & Orchestration | **80%** | `################----` | dbt, Airflow, Superset, Customer 360 |
+| Machine Learning | **85%** | `#################---` | Churn, recommendations, MLflow |
+| FastAPI Serving | **75%** | `###############-----` | Customer, churn and recommendation APIs |
+| GenAI | **65%** | `#############-------` | Ollama, RAG, Qdrant, retrieval evaluation |
+| Production Readiness | **20%** | `####----------------` | Monitoring, testing, security, CI/CD and deployment |
+
+Update a percentage and regenerate this section from the repository root:
+
+```powershell
+./scripts/update_project_status.ps1 -Category "GenAI" -Percent 70
+```
+
+The source of truth is [project-status.json](project-status.json). After editing it directly, run `./scripts/update_project_status.ps1` to refresh this section.
+<!-- project-status:end -->
+
 ## Start Docker containers step by step
 
 Run these commands from the repository root using `docker-compose.yml`.
@@ -219,11 +242,24 @@ These addresses use the host ports in `docker-compose.yml`.
 | MLflow | [localhost:5000](http://localhost:5000) | Experiments, artifacts, and churn model registry |
 | Superset | [localhost:8088](http://localhost:8088) | Datasets, charts, SQL Lab, and dashboards |
 | Kafka UI | [localhost:8080](http://localhost:8080) | Kafka topics, messages, and consumer groups |
+| Qdrant UI | [localhost:6333/dashboard](http://localhost:6333/dashboard) | Browse vector collections, points, and payloads |
 | Flink | [localhost:8081](http://localhost:8081) | Streaming jobs, checkpoints, and task managers |
 | Debezium / Kafka Connect | [localhost:8083](http://localhost:8083) | Connector REST API |
 | Debezium connectors | [localhost:8083/connectors](http://localhost:8083/connectors) | Registered CDC connectors |
 | MinIO console | [localhost:9001](http://localhost:9001) | Browse buckets and lakehouse files |
 | MinIO S3 API | [localhost:9000](http://localhost:9000) | S3-compatible endpoint for storage clients |
+
+### Qdrant UI
+
+Start Qdrant from the repository root:
+
+```bash
+docker compose up -d qdrant
+```
+
+Open the [Qdrant dashboard](http://localhost:6333/dashboard) to inspect vector
+collections and stored points. The API is configured to use the
+`retailpulse_knowledge` collection, which is created by the RAG ingestion workflow.
 
 ### Health and status endpoints
 

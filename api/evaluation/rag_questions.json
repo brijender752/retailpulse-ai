@@ -1,0 +1,49 @@
+[
+  {
+    "id": "rag_001",
+    "question": "What is popular cold start?",
+    "expected_source": "recommendations.md",
+    "expected_heading": "Popular Cold Start",
+    "required_terms": [
+      "little",
+      "historical",
+      "popular"
+    ]
+  },
+  {
+    "id": "rag_002",
+    "question": "What is the RetailPulse churn prediction horizon?",
+    "expected_source": "churn.md",
+    "expected_heading": "Prediction Horizon",
+    "required_terms": [
+      "60"
+    ]
+  },
+  {
+    "id": "rag_003",
+    "question": "What is the Bronze layer used for?",
+    "expected_source": "data_layers.md",
+    "expected_heading": "Bronze",
+    "required_terms": [
+      "raw"
+    ]
+  },
+  {
+    "id": "rag_004",
+    "question": "What is Customer 360?",
+    "expected_source": "customer360.md",
+    "expected_heading": "Customer 360",
+    "required_terms": [
+      "customer"
+    ]
+  },
+  {
+    "id": "rag_005",
+    "question": "What does personalized similarity mean?",
+    "expected_source": "recommendations.md",
+    "expected_heading": "Personalized Similarity",
+    "required_terms": [
+      "similar"
+    ]
+  }
+]

@@ -11,9 +11,13 @@ from app.rag.vector_store import (
 )
 
 
+# Initial cosine similarity cutoff; tune against representative questions.
+MIN_RELEVANCE_SCORE = 0.3
+
+
 async def retrieve_context(
     question: str,
-    limit: int = 4,
+    limit: int = 5,
 ) -> list[dict]:
 
     vector = await embed_text(
@@ -35,6 +39,12 @@ async def retrieve_context(
 
     for point in result.points:
 
+        if (
+            point.score is not None
+            and point.score < MIN_RELEVANCE_SCORE
+        ):
+            continue
+
         payload = (
             point.payload
             or {}
@@ -44,12 +54,19 @@ async def retrieve_context(
             {
                 "text": payload.get(
                     "text",
-                    ""
+                    "",
                 ),
                 "source": payload.get(
-                    "source"
+                    "source",
                 ),
-                "score": point.score,
+                "heading": payload.get(
+                    "heading",
+                ),
+                "score": (
+                    float(point.score)
+                    if point.score is not None
+                    else None
+                ),
             }
         )
 

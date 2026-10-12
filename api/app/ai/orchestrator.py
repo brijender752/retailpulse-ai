@@ -82,10 +82,20 @@ async def answer_customer_question(
         }
 
     rag_results = await retrieve_context(question, limit=4)
-    rag_context = "\n\n".join(
-        f"Source: {item['source']}\n{item['text']}"
-        for item in rag_results
-    )
+    if rag_results:
+        rag_context = "\n\n".join(
+            (
+                f"Source: {item['source']}\n"
+                f"Section: {item['heading']}\n"
+                f"{item['text']}"
+            )
+            for item in rag_results
+        )
+    else:
+        rag_context = (
+            "No relevant RetailPulse knowledge "
+            "was retrieved."
+        )
 
     context_json = json.dumps(
         context,
@@ -113,6 +123,10 @@ Instructions:
 Use structured data for customer-specific facts.
 Use retrieved knowledge for RetailPulse definitions,
 methodology and system explanations.
+If no relevant RetailPulse knowledge was retrieved, explicitly say so
+when the question requires that knowledge. Do not invent RetailPulse
+definitions, methodology or system explanations from general knowledge.
+You may still answer customer-specific questions using the structured data.
 Do not invent missing information.
 A machine-learning prediction is not a guaranteed outcome.
 When relevant, explain which information came from
@@ -155,7 +169,12 @@ customer data and which came from RetailPulse knowledge.
             ),
         },
         "model": ollama.model,
-        "sources": list(dict.fromkeys(
-            item["source"] for item in rag_results if item.get("source")
-        )),
+        "sources": [
+            {
+                "source": item["source"],
+                "heading": item["heading"],
+                "score": item["score"],
+            }
+            for item in rag_results
+        ],
     }

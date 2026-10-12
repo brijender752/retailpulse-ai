@@ -12,7 +12,7 @@ from qdrant_client.models import (
 from app.core.config import settings
 
 from app.rag.chunking import (
-    chunk_text,
+    chunk_markdown,
 )
 
 from app.rag.embeddings import (
@@ -80,18 +80,26 @@ async def ingest_knowledge():
 
     if (
         settings.qdrant_collection
-        not in existing
+        in existing
     ):
 
-        client.create_collection(
+        # Production should use versioned collections
+        # instead of deleting the live index.
+        client.delete_collection(
             collection_name=(
                 settings.qdrant_collection
             ),
-            vectors_config=VectorParams(
-                size=vector_size,
-                distance=Distance.COSINE,
-            ),
         )
+
+    client.create_collection(
+        collection_name=(
+            settings.qdrant_collection
+        ),
+        vectors_config=VectorParams(
+            size=vector_size,
+            distance=Distance.COSINE,
+        ),
+    )
 
     points = []
 
@@ -101,7 +109,7 @@ async def ingest_knowledge():
             encoding="utf-8"
         )
 
-        chunks = chunk_text(
+        chunks = chunk_markdown(
             text
         )
 
@@ -109,8 +117,10 @@ async def ingest_knowledge():
             chunks
         ):
 
+            chunk_text = chunk["text"]
+
             vector = await embed_text(
-                chunk
+                chunk_text
             )
 
             points.append(
@@ -122,8 +132,9 @@ async def ingest_knowledge():
                     vector=vector,
                     payload={
                         "source": document.name,
+                        "heading": chunk["heading"],
                         "chunk_index": index,
-                        "text": chunk,
+                        "text": chunk_text,
                     },
                 )
             )
