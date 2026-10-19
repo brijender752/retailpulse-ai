@@ -2,6 +2,8 @@ from fastapi import FastAPI
 
 from app.core.config import settings
 from app.routes import ai
+from app.routes import agent
+from app.routes import analytics_ai
 
 from app.routes import (
     churn,
@@ -10,6 +12,7 @@ from app.routes import (
     health,
     recommendations,
 )
+
 
 
 app = FastAPI(
@@ -46,6 +49,9 @@ app.include_router(
     ai.router
 )
 
+app.include_router(agent.router)
+app.include_router(analytics_ai.router)
+
 @app.get("/")
 def root():
 
@@ -56,4 +62,4 @@ def root():
     }
 
 
-    
+

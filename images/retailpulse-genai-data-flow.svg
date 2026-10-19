@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="1280" viewBox="0 0 1680 1280"><defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#64748b"/></marker></defs><rect width="1680" height="1280" fill="#f8fafc"/><style>text{font-family:Segoe UI,Arial,sans-serif;fill:#0f172a}.title{font-size:32px;font-weight:700}.subtitle{font-size:17px;fill:#475569}.label{font-size:19px;font-weight:600}.detail{font-size:16px;fill:#475569}.edge{fill:none;stroke:#64748b;stroke-width:2;marker-end:url(#arrow)}</style><text x="60" y="58" class="title">RetailPulse AI | GenAI data flow</text><text x="60" y="91" class="subtitle">Customer assistant, Phase 4.4 agent, RAG knowledge and read-only analytics</text>
+<rect x='600' y='125' width='480' height='84' rx='12' fill='#e0e7ff' stroke='#cbd5e1'/><text x='618' y='156' class='label'>User / Swagger / API client</text><text x='618' y='184' class='detail'>Question, customer ID or session ID</text>
+<rect x='60' y='265' width='470' height='84' rx='12' fill='#dbeafe' stroke='#cbd5e1'/><text x='78' y='296' class='label'>Customer assistant</text><text x='78' y='324' class='detail'>POST /ai/customer</text>
+<rect x='605' y='265' width='470' height='84' rx='12' fill='#dbeafe' stroke='#cbd5e1'/><text x='623' y='296' class='label'>Phase 4.4 agent</text><text x='623' y='324' class='detail'>POST /agent/chat</text>
+<rect x='1150' y='265' width='470' height='84' rx='12' fill='#dbeafe' stroke='#cbd5e1'/><text x='1168' y='296' class='label'>Standalone analytics</text><text x='1168' y='324' class='detail'>POST /analytics-ai/query</text>
+<path d='M840 209 V235 H295 V265' class='edge'/>
+<path d='M840 209 V265' class='edge'/>
+<path d='M840 235 H1385 V265' class='edge'/>
+<rect x='60' y='405' width='470' height='84' rx='12' fill='#ffffff' stroke='#cbd5e1'/><text x='78' y='436' class='label'>Customer context + RAG evidence</text><text x='78' y='464' class='detail'>Stored rankings can answer directly</text>
+<rect x='605' y='405' width='470' height='84' rx='12' fill='#ede9fe' stroke='#cbd5e1'/><text x='623' y='436' class='label'>Ollama / Qwen3: tool selection</text><text x='623' y='464' class='detail'>System rules + history + question</text>
+<rect x='1150' y='405' width='470' height='84' rx='12' fill='#dcfce7' stroke='#cbd5e1'/><text x='1168' y='436' class='label'>Text-to-SQL service</text><text x='1168' y='464' class='detail'>Also called by query_analytics agent tool</text>
+<path d='M295 349 V405' class='edge'/>
+<path d='M840 349 V405' class='edge'/>
+<path d='M1385 349 V405' class='edge'/>
+<rect x='60' y='545' width='470' height='84' rx='12' fill='#fef3c7' stroke='#cbd5e1'/><text x='78' y='576' class='label'>PostgreSQL customer data</text><text x='78' y='604' class='detail'>Customer 360, churn, recommendations</text>
+<rect x='605' y='545' width='470' height='84' rx='12' fill='#ffffff' stroke='#cbd5e1'/><text x='623' y='576' class='label'>Validated agent tool dispatch</text><text x='623' y='604' class='detail'>Customer data | SHAP | knowledge | analytics</text>
+<rect x='1150' y='545' width='470' height='84' rx='12' fill='#ede9fe' stroke='#cbd5e1'/><text x='1168' y='576' class='label'>Ollama / Qwen3: generate SQL</text><text x='1168' y='604' class='detail'>Question + approved schema to JSON</text>
+<path d='M295 545 V489' class='edge'/>
+<path d='M840 489 V545' class='edge'/>
+<path d='M1385 489 V545' class='edge'/>
+<path d='M1075 587 H1110 V447 H1150' class='edge'/>
+<path d='M605 587 H530' class='edge'/>
+<rect x='60' y='685' width='470' height='84' rx='12' fill='#ccfbf1' stroke='#cbd5e1'/><text x='78' y='716' class='label'>Knowledge retrieval</text><text x='78' y='744' class='detail'>Embed question; filter similar chunks</text>
+<rect x='605' y='685' width='470' height='84' rx='12' fill='#fef3c7' stroke='#cbd5e1'/><text x='623' y='716' class='label'>PostgreSQL conversation memory</text><text x='623' y='744' class='detail'>ai.conversations + ai.messages</text>
+<rect x='1150' y='685' width='470' height='84' rx='12' fill='#dcfce7' stroke='#cbd5e1'/><text x='1168' y='716' class='label'>SQLGlot validation</text><text x='1168' y='744' class='detail'>One SELECT; approved columns; max 100 rows</text>
+<path d='M295 685 V650 H35 V447 H60' class='edge'/>
+<path d='M605 610 H565 V727 H530' class='edge'/>
+<path d='M840 685 V650 H1100 V307 H1075' class='edge'/>
+<path d='M1385 629 V685' class='edge'/>
+<rect x='60' y='825' width='470' height='84' rx='12' fill='#ccfbf1' stroke='#cbd5e1'/><text x='78' y='856' class='label'>Qdrant vector store</text><text x='78' y='884' class='detail'>retailpulse_knowledge + source metadata</text>
+<rect x='605' y='825' width='470' height='84' rx='12' fill='#ede9fe' stroke='#cbd5e1'/><text x='623' y='856' class='label'>Tool results back to Qwen3</text><text x='623' y='884' class='detail'>Up to 4 model rounds; 3 calls per round</text>
+<rect x='1150' y='825' width='470' height='84' rx='12' fill='#dcfce7' stroke='#cbd5e1'/><text x='1168' y='856' class='label'>Read-only PostgreSQL execution</text><text x='1168' y='884' class='detail'>retailpulse_analyst; 5-second timeout</text>
+<path d='M295 909 V945 H560 V727 H530' class='edge'/>
+<path d='M295 825 V769' class='edge'/>
+<path d='M840 629 V660 H1120 V867 H1075' class='edge'/>
+<path d='M1385 769 V825' class='edge'/>
+<rect x='60' y='1010' width='470' height='84' rx='12' fill='#ccfbf1' stroke='#cbd5e1'/><text x='78' y='1041' class='label'>Knowledge indexing</text><text x='78' y='1069' class='detail'>/knowledge/*.md → chunks → embeddings</text>
+<rect x='605' y='1010' width='470' height='84' rx='12' fill='#e0e7ff' stroke='#cbd5e1'/><text x='623' y='1041' class='label'>Answer returned to user</text><text x='623' y='1069' class='detail'>Agent: answer + session_id + tools_used</text>
+<rect x='1150' y='1010' width='470' height='84' rx='12' fill='#fef3c7' stroke='#cbd5e1'/><text x='1168' y='1041' class='label'>Approved reporting view</text><text x='1168' y='1069' class='detail'>ai_reporting.customer_metrics</text>
+<path d='M295 1010 V909' class='edge'/>
+<path d='M840 909 V1010' class='edge'/>
+<path d='M1385 909 V1010' class='edge'/>
+<path d='M1150 1052 H1075' class='edge'/>
+<text x="60" y="1145" class="subtitle">Embeddings: Ollama / nomic-embed-text. Customer answers use Ollama / Qwen3 unless a stored-ranking shortcut applies.</text><text x="60" y="1178" class="subtitle">Analytics returns SQL, columns, rows and row_count, or an unsupported reason. Product sales by date are outside the approved view.</text><text x="60" y="1211" class="subtitle">SHAP explanations are precomputed. Memory stores user and assistant messages. Arrows show the main information paths.</text><text x="60" y="1244" class="subtitle">Source implementation diagram. Analytics runtime verification remains pending after reporting-view setup or permission errors.</text></svg>

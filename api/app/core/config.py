@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     postgres_user: str = "postgres"
 
     postgres_password: str = "postgres"
+
+    analyst_db_user: str = "retailpulse_analyst"
+
+    analyst_db_password: str = ""
     
     ollama_url: str = (
         "http://host.docker.internal:11434"

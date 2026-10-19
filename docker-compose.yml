@@ -881,6 +881,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       OLLAMA_URL: http://host.docker.internal:11434
+      ANALYST_DB_USER: retailpulse_analyst
+      ANALYST_DB_PASSWORD: ${ANALYST_DB_PASSWORD}
       OLLAMA_MODEL: qwen3:4b
       OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-300}
       QDRANT_URL: http://qdrant:6333
