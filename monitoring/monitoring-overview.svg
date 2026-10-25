@@ -1,0 +1,65 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1260" viewBox="0 0 1500 1260" role="img" aria-labelledby="title desc"><title id="title">RetailPulse AI monitoring coverage</title><desc id="desc">Planned metrics and collection methods across fifteen services. Exporters feed Prometheus and Grafana.</desc><rect width="1500" height="1260" fill="#0b1220"/><g font-family="Segoe UI, Arial, sans-serif"><text x="48" y="65" font-size="34" font-weight="700" fill="#f8fafc">RetailPulse AI | Monitoring coverage</text><text x="48" y="105" font-size="19" fill="#94a3b8">Data pipeline / Analytics / Machine learning / API / GenAI</text><rect x="48" y="135" width="1404" height="62" rx="12" fill="#163044" stroke="#22d3ee"/><text x="750" y="174" text-anchor="middle" font-size="23" fill="#e0f2fe">Services + checks  →  Exporters / metrics endpoints  →  Prometheus  →  Grafana</text><rect x="48" y="225" width="1404" height="50" rx="8" fill="#1e293b"/>
+<text x='68' y='257' font-size='16' font-weight='700' fill='#67e8f9'>STAGE</text>
+<text x='330' y='257' font-size='16' font-weight='700' fill='#67e8f9'>IMPORTANT METRICS</text>
+<text x='940' y='257' font-size='16' font-weight='700' fill='#67e8f9'>COLLECTION METHOD</text>
+<rect x='48' y='282' width='1404' height='55' rx='6' fill='#111e30'/>
+<text x='68' y='316' font-size='17' fill='#e2e8f0'>PostgreSQL</text>
+<text x='330' y='316' font-size='17' fill='#e2e8f0'>Connections, transactions, replication slot lag</text>
+<text x='940' y='316' font-size='17' fill='#e2e8f0'>postgres_exporter + SQL checks</text>
+<rect x='48' y='341' width='1404' height='55' rx='6' fill='#152438'/>
+<text x='68' y='375' font-size='17' fill='#e2e8f0'>Debezium</text>
+<text x='330' y='375' font-size='17' fill='#e2e8f0'>Connector/task state, events captured, CDC lag</text>
+<text x='940' y='375' font-size='17' fill='#e2e8f0'>Kafka Connect REST + JMX</text>
+<rect x='48' y='400' width='1404' height='55' rx='6' fill='#111e30'/>
+<text x='68' y='434' font-size='17' fill='#e2e8f0'>Kafka</text>
+<text x='330' y='434' font-size='17' fill='#e2e8f0'>Broker health, messages, consumer lag</text>
+<text x='940' y='434' font-size='17' fill='#e2e8f0'>JMX exporter + Kafka exporter</text>
+<rect x='48' y='459' width='1404' height='55' rx='6' fill='#152438'/>
+<text x='68' y='493' font-size='17' fill='#e2e8f0'>PyFlink</text>
+<text x='330' y='493' font-size='17' fill='#e2e8f0'>Running jobs, restarts, checkpoints, failures</text>
+<text x='940' y='493' font-size='17' fill='#e2e8f0'>Flink Prometheus reporter / REST</text>
+<rect x='48' y='518' width='1404' height='55' rx='6' fill='#111e30'/>
+<text x='68' y='552' font-size='17' fill='#e2e8f0'>MinIO</text>
+<text x='330' y='552' font-size='17' fill='#e2e8f0'>Disk usage, S3 operations, storage health</text>
+<text x='940' y='552' font-size='17' fill='#e2e8f0'>Native Prometheus endpoint</text>
+<rect x='48' y='577' width='1404' height='55' rx='6' fill='#152438'/>
+<text x='68' y='611' font-size='17' fill='#e2e8f0'>Spark / Iceberg</text>
+<text x='330' y='611' font-size='17' fill='#e2e8f0'>Job failures, runtime, table freshness, snapshot age</text>
+<text x='940' y='611' font-size='17' fill='#e2e8f0'>Spark metrics + custom checks</text>
+<rect x='48' y='636' width='1404' height='55' rx='6' fill='#111e30'/>
+<text x='68' y='670' font-size='17' fill='#e2e8f0'>Airflow</text>
+<text x='330' y='670' font-size='17' fill='#e2e8f0'>DAG failures, task duration, scheduling delay</text>
+<text x='940' y='670' font-size='17' fill='#e2e8f0'>Airflow metrics integration</text>
+<rect x='48' y='695' width='1404' height='55' rx='6' fill='#152438'/>
+<text x='68' y='729' font-size='17' fill='#e2e8f0'>dbt</text>
+<text x='330' y='729' font-size='17' fill='#e2e8f0'>Test failures, model freshness, run status</text>
+<text x='940' y='729' font-size='17' fill='#e2e8f0'>dbt artifacts + custom exporter</text>
+<rect x='48' y='754' width='1404' height='55' rx='6' fill='#111e30'/>
+<text x='68' y='788' font-size='17' fill='#e2e8f0'>Superset</text>
+<text x='330' y='788' font-size='17' fill='#e2e8f0'>HTTP errors, query latency</text>
+<text x='940' y='788' font-size='17' fill='#e2e8f0'>Application metrics / health checks</text>
+<rect x='48' y='813' width='1404' height='55' rx='6' fill='#152438'/>
+<text x='68' y='847' font-size='17' fill='#e2e8f0'>MLflow</text>
+<text x='330' y='847' font-size='17' fill='#e2e8f0'>Tracking server health, latest model run</text>
+<text x='940' y='847' font-size='17' fill='#e2e8f0'>Health checks + custom metrics</text>
+<rect x='48' y='872' width='1404' height='55' rx='6' fill='#111e30'/>
+<text x='68' y='906' font-size='17' fill='#e2e8f0'>Churn model</text>
+<text x='330' y='906' font-size='17' fill='#e2e8f0'>Prediction freshness, distribution, drift</text>
+<text x='940' y='906' font-size='17' fill='#e2e8f0'>Custom Python exporter</text>
+<rect x='48' y='931' width='1404' height='55' rx='6' fill='#152438'/>
+<text x='68' y='965' font-size='17' fill='#e2e8f0'>Recommendations</text>
+<text x='330' y='965' font-size='17' fill='#e2e8f0'>Coverage, freshness, fallback rate</text>
+<text x='940' y='965' font-size='17' fill='#e2e8f0'>Custom Python exporter</text>
+<rect x='48' y='990' width='1404' height='55' rx='6' fill='#111e30'/>
+<text x='68' y='1024' font-size='17' fill='#e2e8f0'>FastAPI</text>
+<text x='330' y='1024' font-size='17' fill='#e2e8f0'>Request rate, errors, p95 latency</text>
+<text x='940' y='1024' font-size='17' fill='#e2e8f0'>FastAPI Prometheus instrumentator</text>
+<rect x='48' y='1049' width='1404' height='55' rx='6' fill='#152438'/>
+<text x='68' y='1083' font-size='17' fill='#e2e8f0'>Ollama</text>
+<text x='330' y='1083' font-size='17' fill='#e2e8f0'>Request latency, failures, token usage</text>
+<text x='940' y='1083' font-size='17' fill='#e2e8f0'>FastAPI wrapper instrumentation</text>
+<rect x='48' y='1108' width='1404' height='55' rx='6' fill='#111e30'/>
+<text x='68' y='1142' font-size='17' fill='#e2e8f0'>Qdrant / RAG</text>
+<text x='330' y='1142' font-size='17' fill='#e2e8f0'>Vector DB health, retrieval latency, empty results</text>
+<text x='940' y='1142' font-size='17' fill='#e2e8f0'>Qdrant metrics + application metrics</text>
+<text x="48" y="1210" font-size="18" fill="#94a3b8">Configured scrape targets: Prometheus + FastAPI. Other stages require collector setup.</text></g></svg>

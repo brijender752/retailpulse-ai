@@ -6,3 +6,4 @@ psycopg2-binary
 httpx
 qdrant-client
 sqlglot
+prometheus-fastapi-instrumentator

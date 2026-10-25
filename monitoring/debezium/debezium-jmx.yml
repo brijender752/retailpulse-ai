@@ -1,0 +1,32 @@
+startDelaySeconds: 10
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+includeObjectNames:
+  - "debezium.postgresql:type=connector-metrics,*"
+rules:
+  - pattern: 'debezium.postgresql<type=connector-metrics, context=([^,]+), server=([^,>]+)><>TotalNumberOfEventsSeen'
+    name: debezium_events_seen_total
+    type: COUNTER
+    labels:
+      context: "$1"
+      server: "$2"
+  - pattern: 'debezium.postgresql<type=connector-metrics, context=([^,]+), server=([^,>]+)><>MilliSecondsBehindSource'
+    name: debezium_source_lag_seconds
+    type: GAUGE
+    valueFactor: 0.001
+    labels:
+      context: "$1"
+      server: "$2"
+  - pattern: 'debezium.postgresql<type=connector-metrics, context=([^,]+), server=([^,>]+)><>(Connected|SnapshotRunning|SnapshotCompleted|SnapshotAborted)'
+    name: debezium_$3
+    type: GAUGE
+    labels:
+      context: "$1"
+      server: "$2"
+  # Export remaining numeric connector-level attributes without assuming their
+  # names or treating cumulative values as gauges with invented semantics.
+  - pattern: 'debezium.postgresql<type=connector-metrics, context=([^,]+), server=([^,>]+)><>([^:]+)'
+    name: debezium_$3
+    labels:
+      context: "$1"
+      server: "$2"

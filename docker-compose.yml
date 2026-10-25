@@ -252,7 +252,9 @@ services:
 
   debezium:
     profiles: [ingestion]
-    image: quay.io/debezium/connect:3.3.2.Final
+    image: retailpulse/debezium-connect:3.3.2.Final-jmx
+    build:
+      context: ./monitoring/debezium
     container_name: retailpulse-debezium
     restart: unless-stopped
 
@@ -270,6 +272,8 @@ services:
       # ------------------------------------------------------
 
       BOOTSTRAP_SERVERS: kafka:9092
+
+      KAFKA_OPTS: "-javaagent:/opt/monitoring/jmx_prometheus_javaagent.jar=7071:/opt/monitoring/debezium-jmx.yml"
 
       GROUP_ID: 1
 
@@ -407,6 +411,8 @@ services:
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
+        metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+        metrics.reporter.prom.port: 9249
         parallelism.default: 2
         execution.checkpointing.storage: filesystem
         execution.checkpointing.dir: file:///tmp/flink-checkpoints
@@ -458,6 +464,8 @@ services:
       # A 512 MB task heap exhausts during the initial source replay.
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
+        metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+        metrics.reporter.prom.port: 9249
         taskmanager.numberOfTaskSlots: 10
         taskmanager.memory.process.size: 4096m
         taskmanager.memory.task.heap.size: 2048m
@@ -526,6 +534,8 @@ services:
     volumes:
       - ./:/opt/retailpulse
       - spark-iceberg-ivy:/root/.ivy2
+      - spark_events:/opt/spark-events
+      - spark_monitoring:/opt/monitoring-state
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
@@ -555,6 +565,7 @@ services:
     volumes:
       - ./:/opt/retailpulse
       - spark-iceberg-ivy:/root/.ivy2
+      - spark_events:/opt/spark-events
     command:
       - bash
       - -lc
@@ -580,6 +591,21 @@ services:
         tail -F /opt/spark/logs/*
     networks: [retailpulse]
     depends_on: [minio]
+
+  spark-history:
+    profiles: [etl]
+    build:
+      context: .
+      dockerfile: spark/iceberg/Dockerfile
+    container_name: retailpulse-spark-history
+    user: root
+    restart: unless-stopped
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.history.HistoryServer"]
+    ports:
+      - "127.0.0.1:18080:18080"
+    volumes:
+      - spark_events:/opt/spark-events:ro
+    networks: [retailpulse]
 
   dbt:
     profiles: [etl]
@@ -918,6 +944,103 @@ services:
     networks:
       - retailpulse
 
+  retailpulse-metrics:
+    build:
+      context: ./monitoring/exporters
+    container_name: retailpulse-metrics
+    restart: unless-stopped
+    volumes:
+      - spark_monitoring:/opt/monitoring-state:ro
+    ports:
+      - "127.0.0.1:9105:9105"
+    environment:
+      CONNECT_URL: http://debezium:8083
+      FLINK_URL: http://flink-jobmanager:8081
+      POSTGRES_DSN: ${MONITORING_POSTGRES_DSN:?Set MONITORING_POSTGRES_DSN}
+    networks:
+      - retailpulse
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    container_name: retailpulse-postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: ${POSTGRES_EXPORTER_DSN:?Set POSTGRES_EXPORTER_DSN}
+    ports:
+      - "127.0.0.1:9187:9187"
+    networks:
+      - retailpulse
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.53.0
+    container_name: retailpulse-cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - retailpulse
+
+  kafka-exporter:
+    profiles: [ingestion, etl, tools]
+    image: danielqsj/kafka-exporter:v1.9.0
+    container_name: retailpulse-kafka-exporter
+    restart: unless-stopped
+    command:
+      - "--kafka.server=kafka:9092"
+    ports:
+      - "127.0.0.1:9308:9308"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - retailpulse
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: retailpulse-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+    networks:
+      - retailpulse
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    container_name: retailpulse-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - retailpulse
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    container_name: retailpulse-alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    networks:
+      - retailpulse
+
 networks:
   airflow-internal:
     driver: bridge
@@ -932,12 +1055,17 @@ networks:
 
 volumes:
 
+  prometheus_data:
+  grafana_data:
+
   postgres_data:
 
   minio_data:
   kafka_data:
   flink_checkpoints:
   spark-iceberg-ivy:
+  spark_events:
+  spark_monitoring:
   superset-db-data:
   superset-redis-data:
   qdrant-data:

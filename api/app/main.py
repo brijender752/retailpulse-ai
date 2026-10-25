@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.routes import ai
@@ -51,6 +52,12 @@ app.include_router(
 
 app.include_router(agent.router)
 app.include_router(analytics_ai.router)
+
+Instrumentator().instrument(app).expose(
+    app,
+    endpoint="/metrics",
+    include_in_schema=False,
+)
 
 @app.get("/")
 def root():

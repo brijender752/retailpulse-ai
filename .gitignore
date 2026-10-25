@@ -13,6 +13,7 @@ env/
 # Environment
 .env
 superset/.env
+/monitoring/prometheus/secrets/minio_token
 
 # Data
 data/raw/*
